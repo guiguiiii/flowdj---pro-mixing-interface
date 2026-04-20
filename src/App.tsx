@@ -32,6 +32,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MOCK_TRACKS, Track } from './types';
+import {
+  getCrossfaderHandleLeft,
+  getCrossfaderValueFromPointer,
+  getVerticalFaderHandleBottom,
+  getVerticalFaderValueFromPointer,
+} from './crossfader.js';
 
 const PlayPauseIcon = ({ size = 26, color = "currentColor" }: { size?: number, color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="0" strokeLinecap="round" strokeLinejoin="round">
@@ -196,35 +202,89 @@ const VerticalFader = ({
   onChange = (_val: number) => {}, 
   color = "white", 
   height = "h-24",
-  handleSize = 'md'
+  handleSize = 'md',
+  handleOrientation = 'vertical',
 }: { 
   value: number; 
   onChange?: (val: number) => void; 
   color?: string; 
   height?: string; 
   handleSize?: 'sm' | 'md' | 'lg';
+  handleOrientation?: 'vertical' | 'horizontal';
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<HTMLDivElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [faderMetrics, setFaderMetrics] = useState({ trackHeight: 0, handleHeight: 0 });
+
+  useEffect(() => {
+    const updateFaderMetrics = () => {
+      setFaderMetrics({
+        trackHeight: containerRef.current?.clientHeight ?? 0,
+        handleHeight: handleRef.current?.offsetHeight ?? 0,
+      });
+    };
+
+    updateFaderMetrics();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateFaderMetrics();
+    });
+
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+
+    if (handleRef.current) {
+      resizeObserver.observe(handleRef.current);
+    }
+
+    window.addEventListener('resize', updateFaderMetrics);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateFaderMetrics);
+    };
+  }, []);
+
+  const updateValueFromPointer = (clientY: number) => {
+    if (!containerRef.current) return;
+
+    const rect = containerRef.current.getBoundingClientRect();
+    onChange(
+      getVerticalFaderValueFromPointer({
+        pointerY: clientY,
+        trackTop: rect.top,
+        trackHeight: rect.height,
+        handleHeight: faderMetrics.handleHeight,
+      }),
+    );
+  };
 
   const handlePointerDown = (e: React.PointerEvent) => {
-    handleMove(e);
+    setIsDragging(true);
+    updateValueFromPointer(e.clientY);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
-  const handleMove = (e: React.PointerEvent) => {
-    if (!containerRef.current) return;
-    const rect = containerRef.current.getBoundingClientRect();
-    const percent = Math.min(100, Math.max(0, 100 - ((e.clientY - rect.top) / rect.height) * 100));
-    onChange(percent);
-  };
-
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (e.buttons > 0) handleMove(e);
+    if (!isDragging) return;
+    updateValueFromPointer(e.clientY);
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    setIsDragging(false);
+
+    if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    }
   };
+
+  const handleBottom = getVerticalFaderHandleBottom({
+    value,
+    trackHeight: faderMetrics.trackHeight,
+    handleHeight: faderMetrics.handleHeight,
+  });
 
   return (
     <div 
@@ -244,9 +304,11 @@ const VerticalFader = ({
       <div className="w-[3px] h-full bg-black/40 rounded-full relative pointer-events-none shadow-inner">
         <motion.div 
           className="absolute left-1/2 -translate-x-1/2 z-10"
-          style={{ bottom: `${value}%` }}
+          ref={handleRef}
+          animate={{ bottom: handleBottom }}
+          transition={{ type: 'spring', stiffness: 500, damping: 40 }}
         >
-          <FaderHandle color={color} size={handleSize} />
+          <FaderHandle color={color} size={handleSize} orientation={handleOrientation} />
         </motion.div>
       </div>
     </div>
@@ -387,6 +449,9 @@ export default function App() {
   const [isPlayingB, setIsPlayingB] = useState(false);
   const [crossfader, setCrossfader] = useState(50);
   const crossfaderRef = useRef<HTMLDivElement>(null);
+  const crossfaderHandleRef = useRef<HTMLDivElement>(null);
+  const [isCrossfaderDragging, setIsCrossfaderDragging] = useState(false);
+  const [crossfaderMetrics, setCrossfaderMetrics] = useState({ trackWidth: 0, handleWidth: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   
   const [modeA, setModeA] = useState('Mixer');
@@ -409,8 +474,76 @@ export default function App() {
     return panelModes[nextIdx];
   };
 
+  useEffect(() => {
+    const updateCrossfaderMetrics = () => {
+      setCrossfaderMetrics({
+        trackWidth: crossfaderRef.current?.clientWidth ?? 0,
+        handleWidth: crossfaderHandleRef.current?.offsetWidth ?? 0,
+      });
+    };
+
+    updateCrossfaderMetrics();
+
+    const resizeObserver = new ResizeObserver(() => {
+      updateCrossfaderMetrics();
+    });
+
+    if (crossfaderRef.current) {
+      resizeObserver.observe(crossfaderRef.current);
+    }
+
+    if (crossfaderHandleRef.current) {
+      resizeObserver.observe(crossfaderHandleRef.current);
+    }
+
+    window.addEventListener('resize', updateCrossfaderMetrics);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener('resize', updateCrossfaderMetrics);
+    };
+  }, []);
+
+  const updateCrossfaderFromPointer = (clientX: number) => {
+    if (!crossfaderRef.current) return;
+
+    const rect = crossfaderRef.current.getBoundingClientRect();
+    setCrossfader(
+      getCrossfaderValueFromPointer({
+        pointerX: clientX,
+        trackLeft: rect.left,
+        trackWidth: rect.width,
+        handleWidth: crossfaderMetrics.handleWidth,
+      }),
+    );
+  };
+
+  const handleCrossfaderPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsCrossfaderDragging(true);
+    updateCrossfaderFromPointer(e.clientX);
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+
+  const handleCrossfaderPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!isCrossfaderDragging) return;
+    updateCrossfaderFromPointer(e.clientX);
+  };
+
+  const handleCrossfaderPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    setIsCrossfaderDragging(false);
+
+    if (e.currentTarget.hasPointerCapture(e.pointerId)) {
+      e.currentTarget.releasePointerCapture(e.pointerId);
+    }
+  };
+
   const orange = "#FF9457";
   const blue = "#2E8DFF";
+  const crossfaderHandleLeft = getCrossfaderHandleLeft({
+    value: crossfader,
+    trackWidth: crossfaderMetrics.trackWidth,
+    handleWidth: crossfaderMetrics.handleWidth,
+  });
 
   const hotCues = [
     { name: 'Start', color: '#ff3b30' },
@@ -699,7 +832,7 @@ export default function App() {
             <div className="text-[7px] font-mono text-black/30">{(pitchA - 50).toFixed(1)}%</div>
           </div>
           <div className="flex-1 flex items-center min-h-0 py-2">
-            <VerticalFader value={pitchA} color={orange} height="h-32" handleSize="sm" onChange={setPitchA} />
+            <VerticalFader value={pitchA} color={orange} height="h-40" handleSize="sm" handleOrientation="horizontal" onChange={setPitchA} />
           </div>
         </div>
 
@@ -777,7 +910,7 @@ export default function App() {
             <div className="text-[7px] font-mono text-black/30">{(pitchB - 50).toFixed(1)}%</div>
           </div>
           <div className="flex-1 flex items-center min-h-0 py-2">
-            <VerticalFader value={pitchB} color={blue} height="h-32" handleSize="sm" onChange={setPitchB} />
+            <VerticalFader value={pitchB} color={blue} height="h-40" handleSize="sm" handleOrientation="horizontal" onChange={setPitchB} />
           </div>
         </div>
       </div>
@@ -807,7 +940,13 @@ export default function App() {
             <div className="w-0 h-0 border-t-[4px] border-t-transparent border-r-[6px] border-r-white/20 border-b-[4px] border-b-transparent shrink-0" />
             
             {/* Inner Draggable Area */}
-            <div ref={crossfaderRef} className="flex-1 h-full relative flex items-center">
+            <div
+              ref={crossfaderRef}
+              className="flex-1 h-full relative flex items-center touch-none cursor-ew-resize"
+              onPointerDown={handleCrossfaderPointerDown}
+              onPointerMove={handleCrossfaderPointerMove}
+              onPointerUp={handleCrossfaderPointerUp}
+            >
               {/* Track Line */}
               <div className="w-full h-[3px] bg-[#2a2a2a] rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.05)]" />
               
@@ -820,19 +959,9 @@ export default function App() {
               
               {/* Draggable Handle - Redsigned to match FaderHandle.png */}
               <motion.div 
-                drag="x"
-                dragConstraints={crossfaderRef}
-                dragElastic={0}
-                dragMomentum={false}
-                onDrag={(_, info) => {
-                  if (crossfaderRef.current) {
-                    const rect = crossfaderRef.current.getBoundingClientRect();
-                    const x = Math.max(0, Math.min(info.point.x - rect.left, rect.width));
-                    setCrossfader((x / rect.width) * 100);
-                  }
-                }}
-                animate={{ left: `${crossfader}%` }}
-                className="absolute top-1/2 -translate-y-1/2 -translate-x-1/2 z-10 cursor-grab active:cursor-grabbing"
+                ref={crossfaderHandleRef}
+                style={{ left: crossfaderHandleLeft }}
+                className="absolute top-1/2 -translate-y-1/2 z-10 pointer-events-none"
               >
                 <FaderHandle color="#FF823C" orientation="vertical" size="md" />
               </motion.div>
