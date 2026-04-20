@@ -38,6 +38,7 @@ import {
   getVerticalFaderHandleBottom,
   getVerticalFaderValueFromPointer,
 } from './crossfader.js';
+import { getDeckOrbitDot } from './deckDisplay.js';
 
 const PlayPauseIcon = ({ size = 26, color = "currentColor" }: { size?: number, color?: string }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="0" strokeLinecap="round" strokeLinejoin="round">
@@ -216,6 +217,7 @@ const VerticalFader = ({
   const handleRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [faderMetrics, setFaderMetrics] = useState({ trackHeight: 0, handleHeight: 0 });
+  const faderTravelInset = 4;
 
   useEffect(() => {
     const updateFaderMetrics = () => {
@@ -251,11 +253,14 @@ const VerticalFader = ({
     if (!containerRef.current) return;
 
     const rect = containerRef.current.getBoundingClientRect();
+    const trackTop = rect.top + faderTravelInset;
+    const trackHeight = Math.max(rect.height - faderTravelInset * 2, 0);
+
     onChange(
       getVerticalFaderValueFromPointer({
         pointerY: clientY,
-        trackTop: rect.top,
-        trackHeight: rect.height,
+        trackTop,
+        trackHeight,
         handleHeight: faderMetrics.handleHeight,
       }),
     );
@@ -282,14 +287,14 @@ const VerticalFader = ({
 
   const handleBottom = getVerticalFaderHandleBottom({
     value,
-    trackHeight: faderMetrics.trackHeight,
+    trackHeight: Math.max(faderMetrics.trackHeight - faderTravelInset * 2, 0),
     handleHeight: faderMetrics.handleHeight,
   });
 
   return (
     <div 
       ref={containerRef}
-      className={`w-12 ${height} bg-black/30 rounded-xl relative flex justify-center py-4 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.4)] cursor-ns-resize touch-none`}
+      className={`w-12 ${height} bg-black/30 rounded-xl relative flex justify-center py-4 shadow-[inset_1px_1px_3px_rgba(0,0,0,0.4)] cursor-ns-resize touch-none overflow-hidden`}
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
@@ -305,7 +310,7 @@ const VerticalFader = ({
         <motion.div 
           className="absolute left-1/2 -translate-x-1/2 z-10"
           ref={handleRef}
-          style={{ bottom: handleBottom }}
+          style={{ bottom: handleBottom + faderTravelInset }}
         >
           <FaderHandle color={color} size={handleSize} orientation={handleOrientation} />
         </motion.div>
@@ -363,10 +368,14 @@ const VerticalWaveform = ({ color, active, bpm }: { color: string, active: boole
   </div>
 );
 
-const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: string, active: boolean, bpm: number, time: string, title: string, artist: string }) => (
-  <div className="flex flex-col items-center justify-center gap-1 w-full h-full relative p-1 min-w-0">
-    {/* Circular Data Meter - Enlarged by another 20% while keeping container height fixed */}
-    <div className="relative w-[185px] h-[185px] rounded-full neu-convex border-[6px] border-[#D1D1D1] flex flex-col items-center justify-center shadow-xl overflow-hidden shrink-0">
+const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: string, active: boolean, bpm: number, time: string, title: string, artist: string }) => {
+  const orbitRadius = 48.5;
+  const orbitDot = getDeckOrbitDot({ radius: orbitRadius, angleInDegrees: 0 });
+
+  return (
+    <div className="flex flex-col items-center justify-center gap-1 w-full h-full relative p-1 min-w-0">
+      {/* Circular Data Meter - Enlarged by another 20% while keeping container height fixed */}
+      <div className="relative w-[185px] h-[185px] rounded-full neu-convex border-[6px] border-[#D1D1D1] flex flex-col items-center justify-center shadow-xl overflow-visible shrink-0">
       {/* Inner Shadow Ring */}
       <div className="absolute inset-0 rounded-full shadow-[inset_0_0_10px_rgba(0,0,0,0.15)] pointer-events-none" />
       
@@ -390,15 +399,15 @@ const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: strin
         <div className="text-[13px] font-mono font-bold text-black/50 leading-none">03:36.4</div>
       </div>
 
-      {/* Progress Ring & Needle - Moved to outermost edge with fixed concentric rotation */}
-      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full -rotate-90 pointer-events-none overflow-visible">
-        {/* Background Track (Remaining Progress) - Moved further out */}
+      {/* Progress Ring & Orbit Dot */}
+      <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+        {/* Background Track */}
         <circle 
           cx="50" cy="50" r="48.5" 
           fill="none" stroke="#7B7B7B" strokeWidth="0.8" 
           strokeOpacity="0.2"
         />
-        {/* Active Progress - Moved further out */}
+        {/* Active Progress */}
         <motion.circle 
           cx="50" cy="50" r="48.5" 
           fill="none" stroke={color} strokeWidth="1.5" 
@@ -406,24 +415,27 @@ const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: strin
           animate={{ strokeDashoffset: active ? 100 : 304.7 }}
           strokeLinecap="round"
           className="transition-all duration-1000"
+          style={{ rotate: -90, transformOrigin: '50% 50%' }}
         />
-        {/* Needle Indicator - Moved to the absolute perimeter */}
+
+        {/* Orbit Dot - Runs along the outermost ring */}
         <motion.g
           animate={{ rotate: active ? 360 : 0 }}
           transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-          style={{ originX: "50%", originY: "50%" }}
+          style={{ transformOrigin: '50% 50%' }}
         >
           <circle 
-            cx="50" cy="1.5" r="2.5" 
+            cx={orbitDot.x} cy={orbitDot.y} r="3.6" 
             fill={color} 
             className="shadow-sm"
-            style={{ filter: `drop-shadow(0 0 3px ${color})` }}
+            style={{ filter: `drop-shadow(0 0 4px ${color})` }}
           />
         </motion.g>
       </svg>
     </div>
-  </div>
-);
+    </div>
+  );
+};
 
 const VUMeter = ({ color, active }: { color: string, active: boolean }) => (
   <div className="w-2 h-full bg-black/60 border-x border-white/5 relative overflow-hidden">
