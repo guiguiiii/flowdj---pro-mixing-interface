@@ -865,7 +865,12 @@ export default function App() {
         <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-r border-black/5">
           <div className="flex justify-between items-center shrink-0">
             <div className="flex gap-2 text-[8px] font-bold uppercase tracking-widest">
-              <span className="text-deck-a border-b-2 border-deck-a">Hot Cue</span>
+              <span
+                className="text-white border-b-2 border-deck-a"
+                style={{ textShadow: '0 0 8px rgba(255, 148, 87, 0.85), 0 0 14px rgba(255, 148, 87, 0.45)' }}
+              >
+                Hot Cue
+              </span>
               <span className="text-black/20">Pad FX</span>
               <span className="text-black/20">Sample</span>
             </div>
@@ -882,13 +887,6 @@ export default function App() {
                 <div className="w-1.5 h-1.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: cue.color }} />
                 <span className="text-[6px] font-bold uppercase tracking-tighter text-black/50 truncate w-full px-0.5 text-center">{cue.name}</span>
               </button>
-            ))}
-          </div>
-
-          {/* Neural Mix Quick Toggles */}
-          <div className="grid grid-cols-4 gap-1 border-t border-black/5 pt-1 shrink-0">
-            {['Vocal', 'Melody', 'Bass', 'Drums'].map((stem, i) => (
-              <button key={stem} className={`py-0.5 rounded-lg neu-button text-[6px] font-bold uppercase ${i === 0 ? 'text-deck-a' : 'text-black/40'}`}>{stem}</button>
             ))}
           </div>
         </div>
@@ -899,7 +897,12 @@ export default function App() {
         <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-l border-black/5">
           <div className="flex justify-between items-center shrink-0">
             <div className="flex gap-2 text-[8px] font-bold uppercase tracking-widest">
-              <span className="text-deck-b border-b-2 border-deck-b">Hot Cue</span>
+              <span
+                className="text-white border-b-2 border-deck-b"
+                style={{ textShadow: '0 0 8px rgba(46, 141, 255, 0.9), 0 0 14px rgba(46, 141, 255, 0.5)' }}
+              >
+                Hot Cue
+              </span>
               <span className="text-black/20">Pad FX</span>
               <span className="text-black/20">Sample</span>
             </div>
@@ -916,13 +919,6 @@ export default function App() {
                 <div className="w-1.5 h-1.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: cue.color }} />
                 <span className="text-[6px] font-bold uppercase tracking-tighter text-black/50 truncate w-full px-0.5 text-center">{cue.name}</span>
               </button>
-            ))}
-          </div>
-
-          {/* Neural Mix Quick Toggles */}
-          <div className="grid grid-cols-4 gap-1 border-t border-black/5 pt-1 shrink-0">
-            {['Vocal', 'Melody', 'Bass', 'Drums'].map((stem, i) => (
-              <button key={stem} className={`py-0.5 rounded-lg neu-button text-[6px] font-bold uppercase ${i === 0 ? 'text-deck-b' : 'text-black/40'}`}>{stem}</button>
             ))}
           </div>
         </div>
