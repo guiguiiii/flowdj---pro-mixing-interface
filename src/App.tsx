@@ -492,6 +492,8 @@ export default function App() {
   const [levelB, setLevelB] = useState(80);
   const [pitchA, setPitchA] = useState(50);
   const [pitchB, setPitchB] = useState(50);
+  const [selectedHotCueA, setSelectedHotCueA] = useState(0);
+  const [selectedHotCueB, setSelectedHotCueB] = useState(0);
 
   const cycleMode = (current: string, direction: number) => {
     const idx = panelModes.indexOf(current);
@@ -885,11 +887,19 @@ export default function App() {
             {hotCues.map((cue, i) => (
               <button
                 key={i}
-                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
-                style={{ backgroundColor: '#D0D0D0', borderColor: '#D0D0D0', boxShadow: `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}` }}
+                onClick={() => setSelectedHotCueA(i)}
+                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
+                style={{
+                  backgroundColor: selectedHotCueA === i ? '#D8D8D8' : '#D0D0D0',
+                  borderColor: selectedHotCueA === i ? cue.color : '#D0D0D0',
+                  boxShadow: selectedHotCueA === i
+                    ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${cue.color}, 0 0 18px ${cue.glow}, 0 0 28px ${cue.glow}`
+                    : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}`,
+                  transform: selectedHotCueA === i ? 'translateY(-1px)' : 'translateY(0)',
+                }}
               >
                 <div
-                  className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none"
+                  className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none transition-all duration-150"
                   style={{ backgroundColor: cue.color, color: '#111111' }}
                 >
                   {cue.slot}
@@ -897,7 +907,7 @@ export default function App() {
                 <div className="flex-1" />
                 <div className="space-y-1">
                   <div className="text-[18px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#5B5B5B]">{cue.name}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueA === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
                 </div>
               </button>
             ))}
@@ -930,11 +940,19 @@ export default function App() {
             {hotCues.map((cue, i) => (
               <button
                 key={i}
-                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
-                style={{ backgroundColor: '#D0D0D0', borderColor: '#D0D0D0', boxShadow: `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}` }}
+                onClick={() => setSelectedHotCueB(i)}
+                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
+                style={{
+                  backgroundColor: selectedHotCueB === i ? '#D8D8D8' : '#D0D0D0',
+                  borderColor: selectedHotCueB === i ? cue.color : '#D0D0D0',
+                  boxShadow: selectedHotCueB === i
+                    ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${cue.color}, 0 0 18px ${cue.glow}, 0 0 28px ${cue.glow}`
+                    : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}`,
+                  transform: selectedHotCueB === i ? 'translateY(-1px)' : 'translateY(0)',
+                }}
               >
                 <div
-                  className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none"
+                  className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none transition-all duration-150"
                   style={{ backgroundColor: cue.color, color: '#111111' }}
                 >
                   {cue.slot}
@@ -942,7 +960,7 @@ export default function App() {
                 <div className="flex-1" />
                 <div className="space-y-1">
                   <div className="text-[18px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#5B5B5B]">{cue.name}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueB === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
                 </div>
               </button>
             ))}
