@@ -40,14 +40,16 @@ import {
 } from './crossfader.js';
 import { getDeckOrbitDot } from './deckDisplay.js';
 
-const PlayPauseIcon = ({ size = 26, color = "currentColor" }: { size?: number, color?: string }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="0" strokeLinecap="round" strokeLinejoin="round">
-    {/* Two bars and a triangle for the specific DJ style play icon - Bolder as per play_2.png */}
-    <rect x="2" y="4" width="3.5" height="16" rx="1.5" fill={color} />
-    <rect x="7.5" y="4" width="3.5" height="16" rx="1.5" fill={color} />
-    <path d="M14 4l9 8-9 8V4z" fill={color} />
+const PlayPauseIcon = ({ size = 28, color = "#5B5B5B" }: { size?: number, color?: string }) => (
+  <svg width={size} height={(size * 18) / 28} viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect x="0.75" y="0.75" width="5.5" height="16.5" rx="2.75" fill={color} />
+    <rect x="8.75" y="0.75" width="5.5" height="16.5" rx="2.75" fill={color} />
+    <path d="M28 0L18 9L28 18V0Z" fill={color} />
   </svg>
 );
+
+const transportPlayButtonClassName =
+  "w-14 h-10 rounded-[12px] flex items-center justify-center border border-white/10 bg-[#D0D0D0] shadow-[-2px_-2px_4px_rgba(78,78,78,0.12),2px_2px_4px_rgba(42,42,42,0.35)] transition-transform duration-150 hover:scale-[1.02] active:scale-95 active:shadow-[inset_-2px_-2px_4px_rgba(78,78,78,0.12),inset_2px_2px_4px_rgba(42,42,42,0.3)]";
 
 // --- UI Components ---
 
@@ -933,9 +935,9 @@ export default function App() {
         <div className="flex items-center gap-3">
           <button 
             onClick={() => setIsPlayingA(!isPlayingA)} 
-            className="w-14 h-10 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10"
+            className={transportPlayButtonClassName}
           >
-            <PlayPauseIcon color="#3C3C3C" />
+            <PlayPauseIcon />
           </button>
           <button className="px-4 h-10 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10 group">
             <div className="w-2.5 h-2.5 bg-[#FF3B30] rounded-full shadow-[0_0_10px_#FF3B30] group-hover:scale-110 transition-transform" />
@@ -994,9 +996,9 @@ export default function App() {
           </button>
           <button 
             onClick={() => setIsPlayingB(!isPlayingB)} 
-            className="w-14 h-10 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10"
+            className={transportPlayButtonClassName}
           >
-            <PlayPauseIcon color="#3C3C3C" />
+            <PlayPauseIcon />
           </button>
         </div>
       </footer>
