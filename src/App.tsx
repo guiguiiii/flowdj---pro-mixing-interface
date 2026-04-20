@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { 
   Play, 
   Pause, 
@@ -41,7 +41,6 @@ import {
 import { getDeckOrbitDot } from './deckDisplay.js';
 
 const figmaPlayIconSrc = 'https://www.figma.com/api/mcp/asset/0ed6981b-0a24-4450-bc45-ed115813312b';
-
 const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: number }) => (
   <img
     src={figmaPlayIconSrc}
@@ -77,6 +76,14 @@ const Knob = ({
   const [isDragging, setIsDragging] = useState(false);
   const startY = useRef(0);
   const startValue = useRef(0);
+  const silverFillId = useId();
+  const knobMetrics = size === 'sm'
+    ? { shell: 44, labelClass: 'text-[8.5px]', ring: 26, dotRadius: 3.9, dotY: 12.3, stroke: 2.6 }
+    : { shell: 56, labelClass: 'text-[9px]', ring: 33, dotRadius: 4.9, dotY: 15.5, stroke: 3.1 };
+  const rotation = (value - 50) * 2.4;
+  const silverFill = `url(#${silverFillId})`;
+  const outerPath =
+    'M50.9475 0.6064C54.1575 -0.8436 57.9475 0.3864 59.6975 3.4464C62.5575 8.4564 67.4275 11.9964 73.0675 13.1664C76.5175 13.8864 78.8575 17.1064 78.4775 20.6064C77.8475 26.3364 79.7075 32.0664 83.5875 36.3264C85.9575 38.9364 85.9575 42.9164 83.5875 45.5264C79.7075 49.7864 77.8475 55.5164 78.4775 61.2464C78.8675 64.7464 76.5275 67.9764 73.0675 68.6864C67.4275 69.8564 62.5475 73.3964 59.6975 78.4064C57.9475 81.4664 54.1675 82.6964 50.9475 81.2464C45.6975 78.8764 39.6775 78.8764 34.4175 81.2464C31.2075 82.6964 27.4175 81.4664 25.6675 78.4064C22.8075 73.3964 17.9375 69.8564 12.2975 68.6864C8.8475 67.9664 6.5075 64.7464 6.8875 61.2464C7.5175 55.5164 5.6575 49.7864 1.7775 45.5264C-0.5925 42.9164 -0.5925 38.9364 1.7775 36.3264C5.6575 32.0664 7.5175 26.3364 6.8875 20.6064C6.4975 17.1064 8.8375 13.8764 12.2975 13.1664C17.9375 11.9964 22.8175 8.4564 25.6675 3.4464C27.4175 0.3864 31.1975 -0.8436 34.4175 0.6064C39.6675 2.9764 45.6875 2.9764 50.9475 0.6064Z';
 
   const handlePointerDown = (e: React.PointerEvent) => {
     setIsDragging(true);
@@ -98,68 +105,54 @@ const Knob = ({
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
   };
 
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center gap-0 shrink-0">
       <div 
-        className={`relative ${size === 'sm' ? 'w-11 h-11' : 'w-14 h-14'} flex items-center justify-center cursor-pointer active:scale-95 transition-all touch-none`}
+        className="relative flex items-center justify-center cursor-pointer active:scale-95 transition-all touch-none"
+        style={{ width: knobMetrics.shell, height: knobMetrics.shell }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       >
         {variant === 'gear' ? (
           <motion.div 
             className="relative w-full h-full flex items-center justify-center pointer-events-none"
-            animate={{ rotate: (value - 50) * 2.4 }}
+            animate={{ rotate: rotation }}
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
           >
-            <svg className="absolute inset-0 w-full h-full drop-shadow-[1.5px_2.5px_4px_rgba(0,0,0,0.26)]" viewBox="0 0 100 100">
+            <svg
+              className="absolute inset-0 h-full w-full overflow-visible drop-shadow-[1.5px_2.5px_4px_rgba(0,0,0,0.24)]"
+              viewBox="0 0 86 82"
+              aria-hidden="true"
+            >
               <defs>
-                <radialGradient id="knob-face" cx="50%" cy="42%" r="62%">
-                  <stop offset="0%" stopColor="#F1F1F1" />
-                  <stop offset="34%" stopColor="#DCDCDC" />
-                  <stop offset="72%" stopColor="#D0D0D0" />
-                  <stop offset="100%" stopColor="#B9B9B9" />
-                </radialGradient>
-                <linearGradient id="knob-rim" x1="18%" y1="14%" x2="82%" y2="87%">
-                  <stop offset="0%" stopColor="#F3F3F3" />
-                  <stop offset="30%" stopColor="#DCDCDC" />
-                  <stop offset="62%" stopColor="#D0D0D0" />
-                  <stop offset="100%" stopColor="#AAAAAA" />
+                <linearGradient id={silverFillId} x1="13" y1="10" x2="70" y2="73" gradientUnits="userSpaceOnUse">
+                  <stop offset="0" stopColor="#F2F2F2" />
+                  <stop offset="0.45" stopColor="#E2E2E2" />
+                  <stop offset="0.78" stopColor="#D0D0D0" />
+                  <stop offset="1" stopColor="#C4C4C4" />
                 </linearGradient>
               </defs>
-
-              <path
-                d="M50 6
-                   Q58 6 64 10.5
-                   Q70 15 76.5 18.5
-                   Q82 22.5 84.5 29
-                   Q87 35.5 87 42.5
-                   Q87 49.5 84.5 56
-                   Q82 62.5 76.5 66.5
-                   Q70 70.5 64 75
-                   Q58 79.5 50 79.5
-                   Q42 79.5 36 75
-                   Q30 70.5 23.5 66.5
-                   Q18 62.5 15.5 56
-                   Q13 49.5 13 42.5
-                   Q13 35.5 15.5 29
-                   Q18 22.5 23.5 18.5
-                   Q30 15 36 10.5
-                   Q42 6 50 6Z"
-                fill="url(#knob-rim)"
+              <path d={outerPath} fill={silverFill} />
+              <path d={outerPath} fill="rgba(255,255,255,0.18)" />
+              <circle
+                cx="42.9"
+                cy="41"
+                r={knobMetrics.ring}
+                fill="none"
+                stroke={color}
+                strokeWidth={knobMetrics.stroke}
               />
-
-              <circle cx="50" cy="50" r="31.5" fill="url(#knob-face)" />
-              <circle cx="50" cy="50" r="29.8" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.4" />
-
-              <circle cx="50" cy="50" r="22.5" fill="none" stroke="#000000" strokeOpacity="0.08" strokeWidth="3" />
-              <circle cx="50" cy="50" r="22.5" fill="none" stroke={color} strokeOpacity="0.95" strokeWidth="2.8" />
-
-              <circle cx="50" cy="28.5" r="4.6" fill="#D8D8D8" fillOpacity="0.98" />
-              <circle cx="50" cy="28.5" r="3.1" fill={color} />
+              <circle cx="42.9" cy={knobMetrics.dotY + 6} r={knobMetrics.dotRadius} fill={color} />
             </svg>
-
-            <div className="absolute inset-[18%] rounded-full bg-gradient-to-br from-white/40 via-white/10 to-transparent pointer-events-none" />
           </motion.div>
         ) : (
           <div className="w-full h-full rounded-full bg-[#D0D0D0] relative flex items-center justify-center shadow-[2px_2px_4px_rgba(0,0,0,0.2),-2px_-2px_4px_rgba(255,255,255,0.4)] pointer-events-none">
@@ -175,7 +168,7 @@ const Knob = ({
           </div>
         )}
       </div>
-      <span className="text-[8.5px] font-bold uppercase tracking-widest text-black/85 pointer-events-none">{label}</span>
+      <span className={`${knobMetrics.labelClass} font-bold uppercase tracking-widest text-black/85 pointer-events-none`}>{label}</span>
     </div>
   );
 };
@@ -700,7 +693,7 @@ export default function App() {
             {modeA === 'Mixer' && (
               <>
                 <Knob 
-                  label="Hi" color="#95ed21" value={mixerA.hi} variant="gear" 
+                  label="Hi" color="#8bdb0e" value={mixerA.hi} variant="gear" 
                   onChange={(val) => setMixerA(prev => ({ ...prev, hi: val }))} 
                 />
                 <Knob 
@@ -803,7 +796,7 @@ export default function App() {
             {modeB === 'Mixer' && (
               <>
                 <Knob 
-                  label="Hi" color="#95ed21" value={mixerB.hi} variant="gear" 
+                  label="Hi" color="#8bdb0e" value={mixerB.hi} variant="gear" 
                   onChange={(val) => setMixerB(prev => ({ ...prev, hi: val }))} 
                 />
                 <Knob 
