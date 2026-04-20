@@ -378,8 +378,9 @@ const VerticalWaveform = ({ color, active, bpm }: { color: string, active: boole
 );
 
 const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: string, active: boolean, bpm: number, time: string, title: string, artist: string }) => {
-  const orbitRadius = 48.5;
-  const orbitDot = getDeckOrbitDot({ radius: orbitRadius, angleInDegrees: 0 });
+  const orbitRadius = 53.5;
+  const orbitStartAngle = 45;
+  const orbitDot = getDeckOrbitDot({ radius: orbitRadius, angleInDegrees: orbitStartAngle });
 
   return (
     <div className="flex flex-col items-center justify-center gap-1 w-full h-full relative p-1 min-w-0">
@@ -410,6 +411,13 @@ const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: strin
 
       {/* Progress Ring & Orbit Dot */}
       <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
+        {/* Outer Orbit Track */}
+        <circle
+          cx="50" cy="50" r={orbitRadius}
+          fill="none" stroke="#8A8A8A" strokeWidth="2.2"
+          strokeOpacity="0.35"
+        />
+
         {/* Background Track */}
         <circle 
           cx="50" cy="50" r="48.5" 
@@ -434,10 +442,10 @@ const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: strin
           style={{ transformOrigin: '50% 50%' }}
         >
           <circle 
-            cx={orbitDot.x} cy={orbitDot.y} r="3.6" 
+            cx={orbitDot.x} cy={orbitDot.y} r="4.6" 
             fill={color} 
             className="shadow-sm"
-            style={{ filter: `drop-shadow(0 0 4px ${color})` }}
+            style={{ filter: `drop-shadow(0 0 6px ${color})` }}
           />
         </motion.g>
       </svg>
