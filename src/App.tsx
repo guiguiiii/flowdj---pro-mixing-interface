@@ -885,19 +885,19 @@ export default function App() {
             {hotCues.map((cue, i) => (
               <button
                 key={i}
-                className="relative rounded-xl min-h-0 overflow-hidden bg-[#111111] border-2 flex flex-col justify-between p-2 text-left shadow-[0_0_0_1px_rgba(255,255,255,0.06),inset_0_1px_0_rgba(255,255,255,0.05)]"
-                style={{ borderColor: cue.color, boxShadow: `0 0 0 1px rgba(255,255,255,0.05), 0 0 14px ${cue.glow}` }}
+                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
+                style={{ backgroundColor: '#6C6C6C', borderColor: '#D0D0D0', boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}` }}
               >
                 <div
-                  className="absolute left-0 top-0 px-2 py-1 text-[12px] font-black leading-none"
+                  className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none"
                   style={{ backgroundColor: cue.color, color: '#111111' }}
                 >
                   {cue.slot}
                 </div>
                 <div className="flex-1" />
                 <div className="space-y-1">
-                  <div className="text-[12px] font-mono font-semibold tracking-tight text-white/92">{cue.time}</div>
-                  <div className="text-[8px] font-bold uppercase tracking-[0.14em] text-white/60">{cue.name}</div>
+                  <div className="text-[16px] font-mono font-semibold tracking-tight text-[#DADADA]">{cue.time}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#5B5B5B]">{cue.name}</div>
                 </div>
               </button>
             ))}
@@ -930,19 +930,19 @@ export default function App() {
             {hotCues.map((cue, i) => (
               <button
                 key={i}
-                className="relative rounded-xl min-h-0 overflow-hidden bg-[#111111] border-2 flex flex-col justify-between p-2 text-left shadow-[0_0_0_1px_rgba(255,255,255,0.06),inset_0_1px_0_rgba(255,255,255,0.05)]"
-                style={{ borderColor: cue.color, boxShadow: `0 0 0 1px rgba(255,255,255,0.05), 0 0 14px ${cue.glow}` }}
+                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
+                style={{ backgroundColor: '#6C6C6C', borderColor: '#D0D0D0', boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}` }}
               >
                 <div
-                  className="absolute left-0 top-0 px-2 py-1 text-[12px] font-black leading-none"
+                  className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none"
                   style={{ backgroundColor: cue.color, color: '#111111' }}
                 >
                   {cue.slot}
                 </div>
                 <div className="flex-1" />
                 <div className="space-y-1">
-                  <div className="text-[12px] font-mono font-semibold tracking-tight text-white/92">{cue.time}</div>
-                  <div className="text-[8px] font-bold uppercase tracking-[0.14em] text-white/60">{cue.name}</div>
+                  <div className="text-[16px] font-mono font-semibold tracking-tight text-[#DADADA]">{cue.time}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#5B5B5B]">{cue.name}</div>
                 </div>
               </button>
             ))}
