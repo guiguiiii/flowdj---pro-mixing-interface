@@ -378,14 +378,36 @@ const VerticalWaveform = ({ color, active, bpm }: { color: string, active: boole
 );
 
 const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: string, active: boolean, bpm: number, time: string, title: string, artist: string }) => {
-  const orbitRadius = 53.5;
+  const orbitRadius = 58;
   const orbitStartAngle = 45;
   const orbitDot = getDeckOrbitDot({ radius: orbitRadius, angleInDegrees: orbitStartAngle });
+  const orbitInset = '-15px';
 
   return (
     <div className="flex flex-col items-center justify-center gap-1 w-full h-full relative p-1 min-w-0">
       {/* Circular Data Meter - Enlarged by another 20% while keeping container height fixed */}
       <div className="relative w-[185px] h-[185px] rounded-full neu-convex border-[6px] border-[#D1D1D1] flex flex-col items-center justify-center shadow-xl overflow-visible shrink-0">
+      {/* Outer Orbit Track & Moving Dot */}
+      <div className="absolute pointer-events-none" style={{ inset: orbitInset }}>
+        <div className="absolute inset-0 rounded-full border-[3px]" style={{ borderColor: 'rgba(138, 138, 138, 0.55)' }} />
+        <motion.div
+          className="absolute inset-0"
+          animate={{ rotate: active ? 360 : 0 }}
+          transition={{ repeat: active ? Infinity : 0, duration: 2, ease: 'linear' }}
+          style={{ transformOrigin: '50% 50%' }}
+        >
+          <div
+            className="absolute w-[18px] h-[18px] rounded-full -translate-x-1/2 -translate-y-1/2"
+            style={{
+              left: `${orbitDot.x}%`,
+              top: `${orbitDot.y}%`,
+              backgroundColor: color,
+              boxShadow: `0 0 10px ${color}`,
+            }}
+          />
+        </motion.div>
+      </div>
+
       {/* Inner Shadow Ring */}
       <div className="absolute inset-0 rounded-full shadow-[inset_0_0_10px_rgba(0,0,0,0.15)] pointer-events-none" />
       
@@ -409,15 +431,8 @@ const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: strin
         <div className="text-[13px] font-mono font-bold text-black/50 leading-none">03:36.4</div>
       </div>
 
-      {/* Progress Ring & Orbit Dot */}
+      {/* Progress Ring */}
       <svg viewBox="0 0 100 100" className="absolute inset-0 w-full h-full pointer-events-none overflow-visible">
-        {/* Outer Orbit Track */}
-        <circle
-          cx="50" cy="50" r={orbitRadius}
-          fill="none" stroke="#8A8A8A" strokeWidth="2.2"
-          strokeOpacity="0.35"
-        />
-
         {/* Background Track */}
         <circle 
           cx="50" cy="50" r="48.5" 
@@ -434,20 +449,6 @@ const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: strin
           className="transition-all duration-1000"
           style={{ rotate: -90, transformOrigin: '50% 50%' }}
         />
-
-        {/* Orbit Dot - Runs along the outermost ring */}
-        <motion.g
-          animate={{ rotate: active ? 360 : 0 }}
-          transition={{ repeat: Infinity, duration: 2, ease: "linear" }}
-          style={{ transformOrigin: '50% 50%' }}
-        >
-          <circle 
-            cx={orbitDot.x} cy={orbitDot.y} r="4.6" 
-            fill={color} 
-            className="shadow-sm"
-            style={{ filter: `drop-shadow(0 0 6px ${color})` }}
-          />
-        </motion.g>
       </svg>
     </div>
     </div>

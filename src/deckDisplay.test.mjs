@@ -12,7 +12,7 @@ const rightDot = getDeckOrbitDot({ radius: 48.5, angleInDegrees: 90 });
 assert.equal(rightDot.x, 98.5, '90 degrees should place the orbit dot on the right edge of the outer ring');
 assert.equal(rightDot.y, 50, '90 degrees should keep the orbit dot centered vertically');
 
-const upperRightDot = getDeckOrbitDot({ radius: 53.5, angleInDegrees: 45 });
+const upperRightDot = getDeckOrbitDot({ radius: 58, angleInDegrees: 45 });
 
-assert.equal(upperRightDot.x, 87.8, '45 degrees should place the orbit dot in the upper-right quadrant');
-assert.equal(upperRightDot.y, 12.2, '45 degrees should keep the orbit dot on the outer orbit path');
+assert.equal(upperRightDot.x, 91, '45 degrees should place the orbit dot further into the upper-right quadrant on the outer orbit');
+assert.equal(upperRightDot.y, 9, '45 degrees should keep the orbit dot on the more distant outer orbit path');
