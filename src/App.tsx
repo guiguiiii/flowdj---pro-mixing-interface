@@ -41,6 +41,8 @@ import {
 import { getDeckOrbitDot } from './deckDisplay.js';
 
 const figmaPlayIconSrc = 'https://www.figma.com/api/mcp/asset/0ed6981b-0a24-4450-bc45-ed115813312b';
+const knobShellSrc = '/knob-shell.png';
+const knobAccentMaskSrc = '/knob-accent-mask.png';
 
 const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: number }) => (
   <img
@@ -78,9 +80,8 @@ const Knob = ({
   const startY = useRef(0);
   const startValue = useRef(0);
   const knobMetrics = size === 'sm'
-    ? { shell: 44, lobe: 14, lobeRadius: 16.5, face: 30, ring: 24, dotOrbit: 13.3, dot: 4.1, labelClass: 'text-[8.5px]' }
-    : { shell: 56, lobe: 18, lobeRadius: 21, face: 38, ring: 30, dotOrbit: 16.8, dot: 5, labelClass: 'text-[9px]' };
-  const gearLobes = Array.from({ length: 10 }, (_, index) => index * 36);
+    ? { shell: 44, labelClass: 'text-[8.5px]' }
+    : { shell: 56, labelClass: 'text-[9px]' };
   const rotation = (value - 50) * 2.4;
 
   const handlePointerDown = (e: React.PointerEvent) => {
@@ -126,74 +127,28 @@ const Knob = ({
             animate={{ rotate: rotation }}
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
           >
+            <img
+              src={knobShellSrc}
+              alt=""
+              className="absolute inset-0 h-full w-full object-contain drop-shadow-[1.5px_2.5px_4px_rgba(0,0,0,0.22)] select-none"
+              aria-hidden="true"
+              draggable={false}
+            />
             <div
-              className="absolute left-1/2 top-1/2 rounded-full"
+              className="absolute inset-0"
               style={{
-                width: knobMetrics.shell * 0.74,
-                height: knobMetrics.shell * 0.74,
-                transform: 'translate(-50%, -50%)',
-                background: 'linear-gradient(145deg, #f1f1f1 0%, #dcdcdc 52%, #cfcfcf 100%)',
-                boxShadow: '0 4px 7px rgba(0, 0, 0, 0.18)',
+                backgroundColor: color,
+                WebkitMaskImage: `url(${knobAccentMaskSrc})`,
+                maskImage: `url(${knobAccentMaskSrc})`,
+                WebkitMaskRepeat: 'no-repeat',
+                maskRepeat: 'no-repeat',
+                WebkitMaskPosition: 'center',
+                maskPosition: 'center',
+                WebkitMaskSize: 'contain',
+                maskSize: 'contain',
+                filter: 'drop-shadow(0 0 1px rgba(255,255,255,0.15))',
               }}
             />
-            {gearLobes.map((angle) => (
-              <div
-                key={angle}
-                className="absolute left-1/2 top-1/2 rounded-full"
-                style={{
-                  width: knobMetrics.lobe,
-                  height: knobMetrics.lobe,
-                  transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-${knobMetrics.lobeRadius}px)`,
-                  background: 'linear-gradient(145deg, #f3f3f3 0%, #dddddd 58%, #cecece 100%)',
-                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.52)',
-                }}
-              />
-            ))}
-            <div
-              className="absolute left-1/2 top-1/2 rounded-full"
-              style={{
-                width: knobMetrics.face,
-                height: knobMetrics.face,
-                transform: 'translate(-50%, -50%)',
-                background: 'linear-gradient(160deg, #f5f5f5 0%, #e6e6e6 38%, #d0d0d0 100%)',
-                boxShadow: 'inset 0 1.2px 0 rgba(255,255,255,0.72), inset 0 -1.5px 2px rgba(0,0,0,0.08)',
-              }}
-            >
-              <div
-                className="absolute left-1/2 top-1/2 rounded-full"
-                style={{
-                  width: knobMetrics.ring,
-                  height: knobMetrics.ring,
-                  transform: 'translate(-50%, -50%)',
-                  border: `2.8px solid ${color}`,
-                }}
-              />
-              <div
-                className="absolute left-1/2 top-1/2 rounded-full"
-                style={{
-                  width: knobMetrics.face * 0.46,
-                  height: knobMetrics.face * 0.34,
-                  transform: 'translate(-60%, -78%)',
-                  background: 'linear-gradient(180deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0) 100%)',
-                  filter: 'blur(1px)',
-                }}
-              />
-            </div>
-            <div
-              className="absolute left-1/2 top-1/2"
-              style={{ transform: `translate(-50%, -50%) rotate(0deg)` }}
-            >
-              <div
-                className="rounded-full"
-                style={{
-                  width: knobMetrics.dot,
-                  height: knobMetrics.dot,
-                  transform: `translateY(-${knobMetrics.dotOrbit}px)`,
-                  backgroundColor: color,
-                  boxShadow: `0 0 0 2px rgba(255,255,255,0.2), 0 0 8px ${color}20`,
-                }}
-              />
-            </div>
           </motion.div>
         ) : (
           <div className="w-full h-full rounded-full bg-[#D0D0D0] relative flex items-center justify-center shadow-[2px_2px_4px_rgba(0,0,0,0.2),-2px_-2px_4px_rgba(255,255,255,0.4)] pointer-events-none">
