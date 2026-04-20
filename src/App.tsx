@@ -571,10 +571,10 @@ export default function App() {
   });
 
   const hotCues = [
-    { name: 'Start', color: '#ff3b30' },
-    { name: 'Intro', color: '#ff9500' },
-    { name: 'Build', color: '#007aff' },
-    { name: 'Drop', color: '#ffcc00' },
+    { slot: 'A', name: 'Start', time: '00:03', color: '#FF3B7F', glow: 'rgba(255, 59, 127, 0.28)' },
+    { slot: 'B', name: 'Intro', time: '00:20', color: '#2E8DFF', glow: 'rgba(46, 141, 255, 0.24)' },
+    { slot: 'C', name: 'Build', time: '01:05', color: '#7ED321', glow: 'rgba(126, 211, 33, 0.24)' },
+    { slot: 'D', name: 'Drop', time: '01:32', color: '#A86BFF', glow: 'rgba(168, 107, 255, 0.24)' },
   ];
 
   return (
@@ -864,28 +864,41 @@ export default function App() {
         {/* Named Hot Cues A */}
         <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-r border-black/5">
           <div className="flex justify-between items-center shrink-0">
-            <div className="flex gap-2 text-[8px] font-bold uppercase tracking-widest">
+            <div className="flex gap-3 text-[10px] font-bold uppercase tracking-[0.16em]">
               <span
                 className="text-white border-b-2 border-deck-a"
                 style={{ textShadow: '0 0 8px rgba(255, 148, 87, 0.85), 0 0 14px rgba(255, 148, 87, 0.45)' }}
               >
                 Hot Cue
               </span>
-              <span className="text-black/20">Pad FX</span>
-              <span className="text-black/20">Sample</span>
+              <span className="text-black/30">Pad FX</span>
+              <span className="text-black/30">Sample</span>
             </div>
             <div className="flex gap-1">
               {['1/8', '1/4', '1/2', '1'].map(l => (
-                <button key={l} className="px-1 py-0.5 rounded-lg neu-button text-[7px] font-bold text-black/60">{l}</button>
+                <button key={l} className="px-1.5 py-0.5 rounded-lg neu-button text-[9px] font-bold text-black/65">{l}</button>
               ))}
             </div>
           </div>
           
           <div className="flex-1 grid grid-cols-4 gap-1 min-h-0">
             {hotCues.map((cue, i) => (
-              <button key={i} className="rounded-lg neu-button flex flex-col items-center justify-center gap-0.5 min-h-0">
-                <div className="w-1.5 h-1.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: cue.color }} />
-                <span className="text-[6px] font-bold uppercase tracking-tighter text-black/50 truncate w-full px-0.5 text-center">{cue.name}</span>
+              <button
+                key={i}
+                className="relative rounded-xl min-h-0 overflow-hidden bg-[#111111] border-2 flex flex-col justify-between p-2 text-left shadow-[0_0_0_1px_rgba(255,255,255,0.06),inset_0_1px_0_rgba(255,255,255,0.05)]"
+                style={{ borderColor: cue.color, boxShadow: `0 0 0 1px rgba(255,255,255,0.05), 0 0 14px ${cue.glow}` }}
+              >
+                <div
+                  className="absolute left-0 top-0 px-2 py-1 text-[12px] font-black leading-none"
+                  style={{ backgroundColor: cue.color, color: '#111111' }}
+                >
+                  {cue.slot}
+                </div>
+                <div className="flex-1" />
+                <div className="space-y-1">
+                  <div className="text-[12px] font-mono font-semibold tracking-tight text-white/92">{cue.time}</div>
+                  <div className="text-[8px] font-bold uppercase tracking-[0.14em] text-white/60">{cue.name}</div>
+                </div>
               </button>
             ))}
           </div>
@@ -896,28 +909,41 @@ export default function App() {
         {/* Named Hot Cues B */}
         <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-l border-black/5">
           <div className="flex justify-between items-center shrink-0">
-            <div className="flex gap-2 text-[8px] font-bold uppercase tracking-widest">
+            <div className="flex gap-3 text-[10px] font-bold uppercase tracking-[0.16em]">
               <span
                 className="text-white border-b-2 border-deck-b"
                 style={{ textShadow: '0 0 8px rgba(46, 141, 255, 0.9), 0 0 14px rgba(46, 141, 255, 0.5)' }}
               >
                 Hot Cue
               </span>
-              <span className="text-black/20">Pad FX</span>
-              <span className="text-black/20">Sample</span>
+              <span className="text-black/30">Pad FX</span>
+              <span className="text-black/30">Sample</span>
             </div>
             <div className="flex gap-1">
               {['1/8', '1/4', '1/2', '1'].map(l => (
-                <button key={l} className="px-1 py-0.5 rounded-lg neu-button text-[7px] font-bold text-black/60">{l}</button>
+                <button key={l} className="px-1.5 py-0.5 rounded-lg neu-button text-[9px] font-bold text-black/65">{l}</button>
               ))}
             </div>
           </div>
           
           <div className="flex-1 grid grid-cols-4 gap-1 min-h-0">
             {hotCues.map((cue, i) => (
-              <button key={i} className="rounded-lg neu-button flex flex-col items-center justify-center gap-0.5 min-h-0">
-                <div className="w-1.5 h-1.5 rounded-full shadow-sm shrink-0" style={{ backgroundColor: cue.color }} />
-                <span className="text-[6px] font-bold uppercase tracking-tighter text-black/50 truncate w-full px-0.5 text-center">{cue.name}</span>
+              <button
+                key={i}
+                className="relative rounded-xl min-h-0 overflow-hidden bg-[#111111] border-2 flex flex-col justify-between p-2 text-left shadow-[0_0_0_1px_rgba(255,255,255,0.06),inset_0_1px_0_rgba(255,255,255,0.05)]"
+                style={{ borderColor: cue.color, boxShadow: `0 0 0 1px rgba(255,255,255,0.05), 0 0 14px ${cue.glow}` }}
+              >
+                <div
+                  className="absolute left-0 top-0 px-2 py-1 text-[12px] font-black leading-none"
+                  style={{ backgroundColor: cue.color, color: '#111111' }}
+                >
+                  {cue.slot}
+                </div>
+                <div className="flex-1" />
+                <div className="space-y-1">
+                  <div className="text-[12px] font-mono font-semibold tracking-tight text-white/92">{cue.time}</div>
+                  <div className="text-[8px] font-bold uppercase tracking-[0.14em] text-white/60">{cue.name}</div>
+                </div>
               </button>
             ))}
           </div>
