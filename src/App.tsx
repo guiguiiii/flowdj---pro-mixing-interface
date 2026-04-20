@@ -736,7 +736,7 @@ export default function App() {
             {modeA === 'Pads level' && (
               <div className="flex-1 flex flex-col items-center justify-center gap-2">
                 <VerticalFader 
-                  value={levelA} color={orange} height="h-28" 
+                  value={levelA} color={orange} height="h-40" handleSize="sm" handleOrientation="horizontal"
                   onChange={setLevelA} 
                 />
                 <span className="text-[9px] font-bold uppercase tracking-widest text-black/70">Level</span>
@@ -839,7 +839,7 @@ export default function App() {
             {modeB === 'Pads level' && (
               <div className="flex-1 flex flex-col items-center justify-center gap-2">
                 <VerticalFader 
-                  value={levelB} color={blue} height="h-28" 
+                  value={levelB} color={blue} height="h-40" handleSize="sm" handleOrientation="horizontal"
                   onChange={setLevelB} 
                 />
                 <span className="text-[9px] font-bold uppercase tracking-widest text-black/70">Level</span>
