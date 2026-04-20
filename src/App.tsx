@@ -214,6 +214,7 @@ const VerticalFader = ({
   handleOrientation?: 'vertical' | 'horizontal';
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [faderMetrics, setFaderMetrics] = useState({ trackHeight: 0, handleHeight: 0 });
@@ -222,7 +223,7 @@ const VerticalFader = ({
   useEffect(() => {
     const updateFaderMetrics = () => {
       setFaderMetrics({
-        trackHeight: containerRef.current?.clientHeight ?? 0,
+        trackHeight: trackRef.current?.clientHeight ?? 0,
         handleHeight: handleRef.current?.offsetHeight ?? 0,
       });
     };
@@ -233,8 +234,8 @@ const VerticalFader = ({
       updateFaderMetrics();
     });
 
-    if (containerRef.current) {
-      resizeObserver.observe(containerRef.current);
+    if (trackRef.current) {
+      resizeObserver.observe(trackRef.current);
     }
 
     if (handleRef.current) {
@@ -250,9 +251,9 @@ const VerticalFader = ({
   }, []);
 
   const updateValueFromPointer = (clientY: number) => {
-    if (!containerRef.current) return;
+    if (!trackRef.current) return;
 
-    const rect = containerRef.current.getBoundingClientRect();
+    const rect = trackRef.current.getBoundingClientRect();
     const trackTop = rect.top + faderTravelInset;
     const trackHeight = Math.max(rect.height - faderTravelInset * 2, 0);
 
@@ -306,7 +307,7 @@ const VerticalFader = ({
         ))}
       </div>
       
-      <div className="w-[3px] h-full bg-black/40 rounded-full relative pointer-events-none shadow-inner">
+      <div ref={trackRef} className="w-[3px] h-full bg-black/40 rounded-full relative pointer-events-none shadow-inner">
         <motion.div 
           className="absolute left-1/2 -translate-x-1/2 z-10"
           ref={handleRef}
@@ -837,10 +838,10 @@ export default function App() {
         {/* Row 2: Pitch, Hot Cues */}
         {/* Pitch A with Integrated Sync */}
         <div className="opz-panel p-2 flex flex-col items-center gap-1.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#ADADAD' }}>
-          <button className="w-full py-1 rounded-xl neu-button text-[9px] font-bold uppercase text-deck-a shrink-0">Sync</button>
+          <button className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-a shrink-0">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <div className="text-[10px] font-mono font-bold text-black/80">122.0</div>
-            <div className="text-[7px] font-mono text-black/30">{(pitchA - 50).toFixed(1)}%</div>
+            <div className="text-[14px] font-mono font-bold text-black/80">122.0</div>
+            <div className="text-[9px] font-mono font-semibold text-black/35">{(pitchA - 50).toFixed(1)}%</div>
           </div>
           <div className="flex-1 flex items-center min-h-0 py-2">
             <VerticalFader value={pitchA} color={orange} height="h-40" handleSize="sm" handleOrientation="horizontal" onChange={setPitchA} />
@@ -915,10 +916,10 @@ export default function App() {
 
         {/* Pitch B with Integrated Sync */}
         <div className="opz-panel p-2 flex flex-col items-center gap-1.5 min-w-0 border-l border-black/5" style={{ backgroundColor: '#ADADAD' }}>
-          <button className="w-full py-1 rounded-xl neu-button text-[9px] font-bold uppercase text-deck-b shrink-0">Sync</button>
+          <button className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-b shrink-0">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <div className="text-[10px] font-mono font-bold text-black/80">120.0</div>
-            <div className="text-[7px] font-mono text-black/30">{(pitchB - 50).toFixed(1)}%</div>
+            <div className="text-[14px] font-mono font-bold text-black/80">120.0</div>
+            <div className="text-[9px] font-mono font-semibold text-black/35">{(pitchB - 50).toFixed(1)}%</div>
           </div>
           <div className="flex-1 flex items-center min-h-0 py-2">
             <VerticalFader value={pitchB} color={blue} height="h-40" handleSize="sm" handleOrientation="horizontal" onChange={setPitchB} />
