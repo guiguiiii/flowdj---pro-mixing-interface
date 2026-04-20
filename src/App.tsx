@@ -55,6 +55,7 @@ const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: n
 
 const transportPlayButtonClassName =
   "w-14 h-10 rounded-[12px] flex items-center justify-center border border-white/10 bg-[#D0D0D0] shadow-[-2px_-2px_4px_rgba(78,78,78,0.12),2px_2px_4px_rgba(42,42,42,0.35)] transition-transform duration-150 hover:scale-[1.02] active:scale-95 active:shadow-[inset_-2px_-2px_4px_rgba(78,78,78,0.12),inset_2px_2px_4px_rgba(42,42,42,0.3)]";
+const orbitSpinClassName = 'motion-safe:animate-[spin_2s_linear_infinite]';
 
 // --- UI Components ---
 
@@ -384,23 +385,25 @@ const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: strin
         style={{ width: orbitSize, height: orbitSize }}
       >
         <div className="absolute inset-0 rounded-full border-[2px]" style={{ borderColor: 'rgba(138, 138, 138, 0.5)' }} />
-        <motion.div
-          className="absolute inset-0"
-          animate={{ rotate: active ? 360 : 0 }}
-          transition={{ repeat: active ? Infinity : 0, duration: 2, ease: 'linear' }}
+        <div
+          className={`absolute inset-0 ${active ? orbitSpinClassName : ''}`}
           style={{ transformOrigin: '50% 50%' }}
         >
           <div
-            className="absolute rounded-full left-1/2 top-0 -translate-x-1/2 -translate-y-1/2"
-            style={{
-              width: orbitDotSize,
-              height: orbitDotSize,
-              backgroundColor: color,
-              boxShadow: `0 0 10px ${color}`,
-              transform: `translate(-50%, -50%) rotate(${orbitStartAngle}deg)`,
-            }}
-          />
-        </motion.div>
+            className="absolute inset-0"
+            style={{ transform: `rotate(${orbitStartAngle}deg)`, transformOrigin: '50% 50%' }}
+          >
+            <div
+              className="absolute rounded-full left-1/2 top-0 -translate-x-1/2 -translate-y-1/2"
+              style={{
+                width: orbitDotSize,
+                height: orbitDotSize,
+                backgroundColor: color,
+                boxShadow: `0 0 10px ${color}`,
+              }}
+            />
+          </div>
+        </div>
       </div>
 
       {/* Inner Shadow Ring */}
