@@ -38,6 +38,7 @@ import {
   getVerticalFaderHandleBottom,
   getVerticalFaderValueFromPointer,
 } from './crossfader.js';
+import { getKnobValueFromHorizontalDrag } from './knob.js';
 
 const figmaPlayIconSrc = 'https://www.figma.com/api/mcp/asset/0ed6981b-0a24-4450-bc45-ed115813312b';
 const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: number }) => (
@@ -73,12 +74,13 @@ const Knob = ({
   onChange?: (val: number) => void; 
 }) => {
   const [isDragging, setIsDragging] = useState(false);
-  const startY = useRef(0);
+  const startX = useRef(0);
   const startValue = useRef(0);
   const knobMetrics = size === 'sm'
     ? { shell: 46, labelClass: 'text-[8.5px]', dotOffsetY: 1.8 }
     : { shell: 58, labelClass: 'text-[9px]', dotOffsetY: 2.2 };
   const rotation = (value - 50) * 2.4;
+  const knobId = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const outerPath =
     'M50.9475 0.6064C54.1575 -0.8436 57.9475 0.3864 59.6975 3.4464C62.5575 8.4564 67.4275 11.9964 73.0675 13.1664C76.5175 13.8864 78.8575 17.1064 78.4775 20.6064C77.8475 26.3364 79.7075 32.0664 83.5875 36.3264C85.9575 38.9364 85.9575 42.9164 83.5875 45.5264C79.7075 49.7864 77.8475 55.5164 78.4775 61.2464C78.8675 64.7464 76.5275 67.9764 73.0675 68.6864C67.4275 69.8564 62.5475 73.3964 59.6975 78.4064C57.9475 81.4664 54.1675 82.6964 50.9475 81.2464C45.6975 78.8764 39.6775 78.8764 34.4175 81.2464C31.2075 82.6964 27.4175 81.4664 25.6675 78.4064C22.8075 73.3964 17.9375 69.8564 12.2975 68.6864C8.8475 67.9664 6.5075 64.7464 6.8875 61.2464C7.5175 55.5164 5.6575 49.7864 1.7775 45.5264C-0.5925 42.9164 -0.5925 38.9364 1.7775 36.3264C5.6575 32.0664 7.5175 26.3364 6.8875 20.6064C6.4975 17.1064 8.8375 13.8764 12.2975 13.1664C17.9375 11.9964 22.8175 8.4564 25.6675 3.4464C27.4175 0.3864 31.1975 -0.8436 34.4175 0.6064C39.6675 2.9764 45.6875 2.9764 50.9475 0.6064Z';
   const ringPath =
@@ -90,17 +92,20 @@ const Knob = ({
 
   const handlePointerDown = (e: React.PointerEvent) => {
     setIsDragging(true);
-    startY.current = e.clientY;
+    startX.current = e.clientX;
     startValue.current = value;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
     if (!isDragging) return;
-    const deltaY = startY.current - e.clientY;
-    const sensitivity = 0.6;
-    const newValue = Math.min(100, Math.max(0, startValue.current + deltaY * sensitivity));
-    onChange(newValue);
+    onChange(
+      getKnobValueFromHorizontalDrag({
+        startValue: startValue.current,
+        startX: startX.current,
+        currentX: e.clientX,
+      }),
+    );
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
@@ -136,8 +141,20 @@ const Knob = ({
               viewBox="0 0 86 82"
               aria-hidden="true"
             >
-              <path d={outerPath} fill="#FFFFFF" />
-              <path d={innerFacePath} fill="#FFFFFF" />
+              <defs>
+                <linearGradient id={`knob-shell-${knobId}`} x1="14" y1="10" x2="70" y2="72" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#F3F3F3" />
+                  <stop offset="45%" stopColor="#D0D0D0" />
+                  <stop offset="100%" stopColor="#B9B9B9" />
+                </linearGradient>
+                <linearGradient id={`knob-face-${knobId}`} x1="20" y1="15" x2="64" y2="67" gradientUnits="userSpaceOnUse">
+                  <stop offset="0%" stopColor="#FAFAFA" />
+                  <stop offset="50%" stopColor="#D0D0D0" />
+                  <stop offset="100%" stopColor="#C3C3C3" />
+                </linearGradient>
+              </defs>
+              <path d={outerPath} fill={`url(#knob-shell-${knobId})`} />
+              <path d={innerFacePath} fill={`url(#knob-face-${knobId})`} />
               <path d={ringPath} fill={color} />
               <g transform={`translate(0 ${knobMetrics.dotOffsetY})`}>
                 <path d={dotPath} fill={color} />
