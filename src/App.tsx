@@ -862,7 +862,7 @@ export default function App() {
         </div>
 
         {/* Named Hot Cues A */}
-        <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-r border-black/5">
+        <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
           <div className="flex justify-between items-center shrink-0">
             <div className="flex gap-3 text-[10px] font-bold uppercase tracking-[0.16em]">
               <span
@@ -886,7 +886,7 @@ export default function App() {
               <button
                 key={i}
                 className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
-                style={{ backgroundColor: '#6C6C6C', borderColor: '#D0D0D0', boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}` }}
+                style={{ backgroundColor: '#D0D0D0', borderColor: '#D0D0D0', boxShadow: `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}` }}
               >
                 <div
                   className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none"
@@ -896,7 +896,7 @@ export default function App() {
                 </div>
                 <div className="flex-1" />
                 <div className="space-y-1">
-                  <div className="text-[16px] font-mono font-semibold tracking-tight text-[#DADADA]">{cue.time}</div>
+                  <div className="text-[18px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
                   <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#5B5B5B]">{cue.name}</div>
                 </div>
               </button>
@@ -907,7 +907,7 @@ export default function App() {
         {/* Central Column is spanned by the row-span-2 div above */}
 
         {/* Named Hot Cues B */}
-        <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-l border-black/5">
+        <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-l border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
           <div className="flex justify-between items-center shrink-0">
             <div className="flex gap-3 text-[10px] font-bold uppercase tracking-[0.16em]">
               <span
@@ -931,7 +931,7 @@ export default function App() {
               <button
                 key={i}
                 className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)]"
-                style={{ backgroundColor: '#6C6C6C', borderColor: '#D0D0D0', boxShadow: `inset 0 1px 0 rgba(255,255,255,0.18), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}` }}
+                style={{ backgroundColor: '#D0D0D0', borderColor: '#D0D0D0', boxShadow: `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}` }}
               >
                 <div
                   className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none"
@@ -941,7 +941,7 @@ export default function App() {
                 </div>
                 <div className="flex-1" />
                 <div className="space-y-1">
-                  <div className="text-[16px] font-mono font-semibold tracking-tight text-[#DADADA]">{cue.time}</div>
+                  <div className="text-[18px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
                   <div className="text-[10px] font-bold uppercase tracking-[0.14em] text-[#5B5B5B]">{cue.name}</div>
                 </div>
               </button>
