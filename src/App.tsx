@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { 
   Play, 
   Pause, 
@@ -77,6 +77,12 @@ const Knob = ({
   const [isDragging, setIsDragging] = useState(false);
   const startY = useRef(0);
   const startValue = useRef(0);
+  const faceGradientId = useId();
+  const rimGradientId = useId();
+  const shineGradientId = useId();
+  const glossGradientId = useId();
+  const gearOuterPath =
+    "M50 5.5C55.5 5.5 60.4 10.1 65.5 11.1C70.8 12.2 77.2 10 81.6 13.1C86.1 16.3 86.8 23 89.9 27.5C93 31.9 98.9 35.3 100 40.6C101.1 45.7 96.8 50.8 96.8 56C96.8 61.2 101.1 66.3 100 71.4C98.9 76.7 93 80.1 89.9 84.5C86.8 89 86.1 95.7 81.6 98.9C77.2 102 70.8 99.8 65.5 100.9C60.4 101.9 55.5 106.5 50 106.5C44.5 106.5 39.6 101.9 34.5 100.9C29.2 99.8 22.8 102 18.4 98.9C13.9 95.7 13.2 89 10.1 84.5C7 80.1 1.1 76.7 0 71.4C-1.1 66.3 3.2 61.2 3.2 56C3.2 50.8 -1.1 45.7 0 40.6C1.1 35.3 7 31.9 10.1 27.5C13.2 23 13.9 16.3 18.4 13.1C22.8 10 29.2 12.2 34.5 11.1C39.6 10.1 44.5 5.5 50 5.5Z";
 
   const handlePointerDown = (e: React.PointerEvent) => {
     setIsDragging(true);
@@ -98,6 +104,13 @@ const Knob = ({
     (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
   };
 
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    setIsDragging(false);
+    if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    }
+  };
+
   return (
     <div className="flex flex-col items-center gap-0 shrink-0">
       <div 
@@ -105,6 +118,7 @@ const Knob = ({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerCancel}
       >
         {variant === 'gear' ? (
           <motion.div 
@@ -112,54 +126,54 @@ const Knob = ({
             animate={{ rotate: (value - 50) * 2.4 }}
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
           >
-            <svg className="absolute inset-0 w-full h-full drop-shadow-[1.5px_2.5px_4px_rgba(0,0,0,0.26)]" viewBox="0 0 100 100">
+            <svg className="absolute inset-0 w-full h-full drop-shadow-[1.5px_2.5px_4px_rgba(0,0,0,0.26)]" viewBox="0 0 100 112" aria-hidden="true">
               <defs>
-                <radialGradient id="knob-face" cx="50%" cy="42%" r="62%">
-                  <stop offset="0%" stopColor="#F1F1F1" />
-                  <stop offset="34%" stopColor="#DCDCDC" />
-                  <stop offset="72%" stopColor="#D0D0D0" />
-                  <stop offset="100%" stopColor="#B9B9B9" />
+                <radialGradient id={faceGradientId} cx="50%" cy="38%" r="68%">
+                  <stop offset="0%" stopColor="#F2F2F2" />
+                  <stop offset="40%" stopColor="#E0E0E0" />
+                  <stop offset="78%" stopColor="#D0D0D0" />
+                  <stop offset="100%" stopColor="#B5B5B5" />
                 </radialGradient>
-                <linearGradient id="knob-rim" x1="18%" y1="14%" x2="82%" y2="87%">
-                  <stop offset="0%" stopColor="#F3F3F3" />
-                  <stop offset="30%" stopColor="#DCDCDC" />
-                  <stop offset="62%" stopColor="#D0D0D0" />
-                  <stop offset="100%" stopColor="#AAAAAA" />
+                <linearGradient id={rimGradientId} x1="18%" y1="10%" x2="82%" y2="90%">
+                  <stop offset="0%" stopColor="#F7F7F7" />
+                  <stop offset="34%" stopColor="#DCDCDC" />
+                  <stop offset="68%" stopColor="#D0D0D0" />
+                  <stop offset="100%" stopColor="#A9A9A9" />
+                </linearGradient>
+                <radialGradient id={shineGradientId} cx="42%" cy="24%" r="64%">
+                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.85" />
+                  <stop offset="42%" stopColor="#FFFFFF" stopOpacity="0.24" />
+                  <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
+                </radialGradient>
+                <linearGradient id={glossGradientId} x1="28%" y1="18%" x2="72%" y2="84%">
+                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.42" />
+                  <stop offset="38%" stopColor="#FFFFFF" stopOpacity="0.12" />
+                  <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
                 </linearGradient>
               </defs>
 
               <path
-                d="M50 6
-                   Q58 6 64 10.5
-                   Q70 15 76.5 18.5
-                   Q82 22.5 84.5 29
-                   Q87 35.5 87 42.5
-                   Q87 49.5 84.5 56
-                   Q82 62.5 76.5 66.5
-                   Q70 70.5 64 75
-                   Q58 79.5 50 79.5
-                   Q42 79.5 36 75
-                   Q30 70.5 23.5 66.5
-                   Q18 62.5 15.5 56
-                   Q13 49.5 13 42.5
-                   Q13 35.5 15.5 29
-                   Q18 22.5 23.5 18.5
-                   Q30 15 36 10.5
-                   Q42 6 50 6Z"
-                fill="url(#knob-rim)"
+                d={gearOuterPath}
+                transform="translate(0 -6)"
+                fill={`url(#${rimGradientId})`}
+              />
+              <path
+                d={gearOuterPath}
+                transform="translate(0 -6)"
+                fill={`url(#${shineGradientId})`}
+                opacity="0.7"
               />
 
-              <circle cx="50" cy="50" r="31.5" fill="url(#knob-face)" />
-              <circle cx="50" cy="50" r="29.8" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.4" />
+              <circle cx="50" cy="50" r="32" fill={`url(#${faceGradientId})`} />
+              <circle cx="50" cy="50" r="29.8" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.2" />
+              <circle cx="50" cy="50" r="29.2" fill="none" stroke="rgba(0,0,0,0.07)" strokeWidth="0.8" />
+              <circle cx="50" cy="50" r="24.1" fill="none" stroke="#000000" strokeOpacity="0.05" strokeWidth="3.8" />
+              <circle cx="50" cy="50" r="24.1" fill="none" stroke={color} strokeOpacity="0.96" strokeWidth="2.8" />
 
-              <circle cx="50" cy="50" r="22.5" fill="none" stroke="#000000" strokeOpacity="0.08" strokeWidth="3" />
-              <circle cx="50" cy="50" r="22.5" fill="none" stroke={color} strokeOpacity="0.95" strokeWidth="2.8" />
-
-              <circle cx="50" cy="28.5" r="4.6" fill="#D8D8D8" fillOpacity="0.98" />
-              <circle cx="50" cy="28.5" r="3.1" fill={color} />
+              <circle cx="50" cy="24.5" r="4.2" fill="#D9D9D9" fillOpacity="0.98" />
+              <circle cx="50" cy="24.5" r="2.75" fill={color} />
+              <ellipse cx="41.5" cy="32" rx="17" ry="12.5" fill={`url(#${glossGradientId})`} />
             </svg>
-
-            <div className="absolute inset-[18%] rounded-full bg-gradient-to-br from-white/40 via-white/10 to-transparent pointer-events-none" />
           </motion.div>
         ) : (
           <div className="w-full h-full rounded-full bg-[#D0D0D0] relative flex items-center justify-center shadow-[2px_2px_4px_rgba(0,0,0,0.2),-2px_-2px_4px_rgba(255,255,255,0.4)] pointer-events-none">
@@ -700,7 +714,7 @@ export default function App() {
             {modeA === 'Mixer' && (
               <>
                 <Knob 
-                  label="Hi" color="#95ed21" value={mixerA.hi} variant="gear" 
+                  label="Hi" color="#8bdb0e" value={mixerA.hi} variant="gear" 
                   onChange={(val) => setMixerA(prev => ({ ...prev, hi: val }))} 
                 />
                 <Knob 
@@ -803,7 +817,7 @@ export default function App() {
             {modeB === 'Mixer' && (
               <>
                 <Knob 
-                  label="Hi" color="#95ed21" value={mixerB.hi} variant="gear" 
+                  label="Hi" color="#8bdb0e" value={mixerB.hi} variant="gear" 
                   onChange={(val) => setMixerB(prev => ({ ...prev, hi: val }))} 
                 />
                 <Knob 
