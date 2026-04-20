@@ -305,8 +305,7 @@ const VerticalFader = ({
         <motion.div 
           className="absolute left-1/2 -translate-x-1/2 z-10"
           ref={handleRef}
-          animate={{ bottom: handleBottom }}
-          transition={{ type: 'spring', stiffness: 500, damping: 40 }}
+          style={{ bottom: handleBottom }}
         >
           <FaderHandle color={color} size={handleSize} orientation={handleOrientation} />
         </motion.div>
