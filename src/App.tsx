@@ -38,7 +38,6 @@ import {
   getVerticalFaderHandleBottom,
   getVerticalFaderValueFromPointer,
 } from './crossfader.js';
-import { getDeckOrbitDot } from './deckDisplay.js';
 
 const figmaPlayIconSrc = 'https://www.figma.com/api/mcp/asset/0ed6981b-0a24-4450-bc45-ed115813312b';
 const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: number }) => (
@@ -354,18 +353,20 @@ const VerticalWaveform = ({ color, active, bpm }: { color: string, active: boole
 );
 
 const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: string, active: boolean, bpm: number, time: string, title: string, artist: string }) => {
-  const orbitRadius = 58;
+  const orbitSize = 214;
+  const orbitDotSize = 18;
   const orbitStartAngle = 45;
-  const orbitDot = getDeckOrbitDot({ radius: orbitRadius, angleInDegrees: orbitStartAngle });
-  const orbitInset = '-15px';
 
   return (
     <div className="flex flex-col items-center justify-center gap-1 w-full h-full relative p-1 min-w-0">
       {/* Circular Data Meter - Enlarged by another 20% while keeping container height fixed */}
       <div className="relative w-[185px] h-[185px] rounded-full neu-convex border-[6px] border-[#D1D1D1] flex flex-col items-center justify-center shadow-xl overflow-visible shrink-0">
       {/* Outer Orbit Track & Moving Dot */}
-      <div className="absolute pointer-events-none" style={{ inset: orbitInset }}>
-        <div className="absolute inset-0 rounded-full border-[3px]" style={{ borderColor: 'rgba(138, 138, 138, 0.55)' }} />
+      <div
+        className="absolute pointer-events-none left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        style={{ width: orbitSize, height: orbitSize }}
+      >
+        <div className="absolute inset-0 rounded-full border-[2px]" style={{ borderColor: 'rgba(138, 138, 138, 0.5)' }} />
         <motion.div
           className="absolute inset-0"
           animate={{ rotate: active ? 360 : 0 }}
@@ -373,12 +374,13 @@ const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: strin
           style={{ transformOrigin: '50% 50%' }}
         >
           <div
-            className="absolute w-[18px] h-[18px] rounded-full -translate-x-1/2 -translate-y-1/2"
+            className="absolute rounded-full left-1/2 top-0 -translate-x-1/2 -translate-y-1/2"
             style={{
-              left: `${orbitDot.x}%`,
-              top: `${orbitDot.y}%`,
+              width: orbitDotSize,
+              height: orbitDotSize,
               backgroundColor: color,
               boxShadow: `0 0 10px ${color}`,
+              transform: `translate(-50%, -50%) rotate(${orbitStartAngle}deg)`,
             }}
           />
         </motion.div>
