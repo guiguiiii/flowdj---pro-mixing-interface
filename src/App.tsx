@@ -112,62 +112,54 @@ const Knob = ({
             animate={{ rotate: (value - 50) * 2.4 }}
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
           >
-            {/* Entire Gear Body - Center shifted to 50,50 for perfect rotation */}
-            <svg className="absolute inset-0 w-full h-full drop-shadow-[1.5px_2.5px_4px_rgba(0,0,0,0.35)]" viewBox="0 0 100 100">
-              <path 
-                d="M50,5 
-                   C58,5 60,13 67,15 
-                   C73,17 80,15 83,21 
-                   C86,27 84,34 88,39 
-                   C92,44 95,45 95,50 
-                   C95,55 92,56 88,61 
-                   C84,66 86,73 83,79 
-                   C80,85 73,83 67,85 
-                   C60,87 58,95 50,95 
-                   C42,95 40,87 33,85 
-                   C27,83 20,85 17,79 
-                   C14,73 16,66 12,61 
-                   C8,56 5,55 5,50 
-                   C5,45 8,44 12,39 
-                   C16,34 14,27 17,21 
-                   C20,15 27,17 33,15 
-                   C40,13 42,5 50,5Z" 
-                fill="#D0D0D0" 
+            <svg className="absolute inset-0 w-full h-full drop-shadow-[1.5px_2.5px_4px_rgba(0,0,0,0.26)]" viewBox="0 0 100 100">
+              <defs>
+                <radialGradient id="knob-face" cx="50%" cy="42%" r="62%">
+                  <stop offset="0%" stopColor="#F1F1F1" />
+                  <stop offset="34%" stopColor="#DCDCDC" />
+                  <stop offset="72%" stopColor="#D0D0D0" />
+                  <stop offset="100%" stopColor="#B9B9B9" />
+                </radialGradient>
+                <linearGradient id="knob-rim" x1="18%" y1="14%" x2="82%" y2="87%">
+                  <stop offset="0%" stopColor="#F3F3F3" />
+                  <stop offset="30%" stopColor="#DCDCDC" />
+                  <stop offset="62%" stopColor="#D0D0D0" />
+                  <stop offset="100%" stopColor="#AAAAAA" />
+                </linearGradient>
+              </defs>
+
+              <path
+                d="M50 4
+                   C56 4 59 12 64.5 13.8
+                   C70 15.6 77 12.7 81.3 16.7
+                   C85.6 20.7 83.4 27.9 86.5 32.8
+                   C89.6 37.7 96.2 41.3 96.2 47
+                   C96.2 52.7 89.6 56.3 86.5 61.2
+                   C83.4 66.1 85.6 73.3 81.3 77.3
+                   C77 81.3 70 78.4 64.5 80.2
+                   C59 82 56 90 50 90
+                   C44 90 41 82 35.5 80.2
+                   C30 78.4 23 81.3 18.7 77.3
+                   C14.4 73.3 16.6 66.1 13.5 61.2
+                   C10.4 56.3 3.8 52.7 3.8 47
+                   C3.8 41.3 10.4 37.7 13.5 32.8
+                   C16.6 27.9 14.4 20.7 18.7 16.7
+                   C23 12.7 30 15.6 35.5 13.8
+                   C41 12 44 4 50 4Z"
+                fill="url(#knob-rim)"
               />
-              {/* Inner top face shading to create depth */}
-              <circle cx="50" cy="50" r="32" fill="#D0D0D0" className="opacity-70" />
-              
-              {/* Engraved Ring Groove - Centered */}
-              <circle 
-                cx="50" cy="50" r="23" 
-                fill="none" 
-                stroke="#000000" 
-                strokeOpacity="0.25" 
-                strokeWidth="5" 
-              />
-              <circle 
-                cx="50" cy="50" r="23" 
-                fill="none" 
-                stroke={color} 
-                strokeOpacity="0.95" 
-                strokeWidth="3.5" 
-              />
-  
-              {/* Engraved Dot Groove - Shifted up to match new center */}
-              <circle 
-                cx="50" cy="37" r="5" 
-                fill="#000000" 
-                fillOpacity="0.18" 
-              />
-              <circle 
-                cx="50" cy="37" r="3.2" 
-                fill={color} 
-                fillOpacity="1" 
-              />
+
+              <circle cx="50" cy="50" r="31.5" fill="url(#knob-face)" />
+              <circle cx="50" cy="50" r="29.8" fill="none" stroke="rgba(255,255,255,0.45)" strokeWidth="1.4" />
+
+              <circle cx="50" cy="50" r="22.5" fill="none" stroke="#000000" strokeOpacity="0.08" strokeWidth="3" />
+              <circle cx="50" cy="50" r="22.5" fill="none" stroke={color} strokeOpacity="0.95" strokeWidth="2.8" />
+
+              <circle cx="50" cy="28.5" r="4.6" fill="#D8D8D8" fillOpacity="0.98" />
+              <circle cx="50" cy="28.5" r="3.1" fill={color} />
             </svg>
-  
-            {/* Subtle light reflections on the top surface */}
-            <div className="absolute inset-[15%] rounded-full bg-gradient-to-br from-white/45 to-transparent pointer-events-none" />
+
+            <div className="absolute inset-[18%] rounded-full bg-gradient-to-br from-white/40 via-white/10 to-transparent pointer-events-none" />
           </motion.div>
         ) : (
           <div className="w-full h-full rounded-full bg-[#D0D0D0] relative flex items-center justify-center shadow-[2px_2px_4px_rgba(0,0,0,0.2),-2px_-2px_4px_rgba(255,255,255,0.4)] pointer-events-none">
