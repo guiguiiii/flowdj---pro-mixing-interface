@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   Play, 
   Pause, 
@@ -77,12 +77,11 @@ const Knob = ({
   const [isDragging, setIsDragging] = useState(false);
   const startY = useRef(0);
   const startValue = useRef(0);
-  const faceGradientId = useId();
-  const rimGradientId = useId();
-  const shineGradientId = useId();
-  const glossGradientId = useId();
-  const gearOuterPath =
-    "M50 5.5C55.5 5.5 60.4 10.1 65.5 11.1C70.8 12.2 77.2 10 81.6 13.1C86.1 16.3 86.8 23 89.9 27.5C93 31.9 98.9 35.3 100 40.6C101.1 45.7 96.8 50.8 96.8 56C96.8 61.2 101.1 66.3 100 71.4C98.9 76.7 93 80.1 89.9 84.5C86.8 89 86.1 95.7 81.6 98.9C77.2 102 70.8 99.8 65.5 100.9C60.4 101.9 55.5 106.5 50 106.5C44.5 106.5 39.6 101.9 34.5 100.9C29.2 99.8 22.8 102 18.4 98.9C13.9 95.7 13.2 89 10.1 84.5C7 80.1 1.1 76.7 0 71.4C-1.1 66.3 3.2 61.2 3.2 56C3.2 50.8 -1.1 45.7 0 40.6C1.1 35.3 7 31.9 10.1 27.5C13.2 23 13.9 16.3 18.4 13.1C22.8 10 29.2 12.2 34.5 11.1C39.6 10.1 44.5 5.5 50 5.5Z";
+  const knobMetrics = size === 'sm'
+    ? { shell: 44, lobe: 14, lobeRadius: 16.5, face: 30, ring: 24, dotOrbit: 13.3, dot: 4.1, labelClass: 'text-[8.5px]' }
+    : { shell: 56, lobe: 18, lobeRadius: 21, face: 38, ring: 30, dotOrbit: 16.8, dot: 5, labelClass: 'text-[9px]' };
+  const gearLobes = Array.from({ length: 10 }, (_, index) => index * 36);
+  const rotation = (value - 50) * 2.4;
 
   const handlePointerDown = (e: React.PointerEvent) => {
     setIsDragging(true);
@@ -114,7 +113,8 @@ const Knob = ({
   return (
     <div className="flex flex-col items-center gap-0 shrink-0">
       <div 
-        className={`relative ${size === 'sm' ? 'w-11 h-11' : 'w-14 h-14'} flex items-center justify-center cursor-pointer active:scale-95 transition-all touch-none`}
+        className="relative flex items-center justify-center cursor-pointer active:scale-95 transition-all touch-none"
+        style={{ width: knobMetrics.shell, height: knobMetrics.shell }}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
@@ -123,57 +123,77 @@ const Knob = ({
         {variant === 'gear' ? (
           <motion.div 
             className="relative w-full h-full flex items-center justify-center pointer-events-none"
-            animate={{ rotate: (value - 50) * 2.4 }}
+            animate={{ rotate: rotation }}
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
           >
-            <svg className="absolute inset-0 w-full h-full drop-shadow-[1.5px_2.5px_4px_rgba(0,0,0,0.26)]" viewBox="0 0 100 112" aria-hidden="true">
-              <defs>
-                <radialGradient id={faceGradientId} cx="50%" cy="38%" r="68%">
-                  <stop offset="0%" stopColor="#F2F2F2" />
-                  <stop offset="40%" stopColor="#E0E0E0" />
-                  <stop offset="78%" stopColor="#D0D0D0" />
-                  <stop offset="100%" stopColor="#B5B5B5" />
-                </radialGradient>
-                <linearGradient id={rimGradientId} x1="18%" y1="10%" x2="82%" y2="90%">
-                  <stop offset="0%" stopColor="#F7F7F7" />
-                  <stop offset="34%" stopColor="#DCDCDC" />
-                  <stop offset="68%" stopColor="#D0D0D0" />
-                  <stop offset="100%" stopColor="#A9A9A9" />
-                </linearGradient>
-                <radialGradient id={shineGradientId} cx="42%" cy="24%" r="64%">
-                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.85" />
-                  <stop offset="42%" stopColor="#FFFFFF" stopOpacity="0.24" />
-                  <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-                </radialGradient>
-                <linearGradient id={glossGradientId} x1="28%" y1="18%" x2="72%" y2="84%">
-                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.42" />
-                  <stop offset="38%" stopColor="#FFFFFF" stopOpacity="0.12" />
-                  <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0" />
-                </linearGradient>
-              </defs>
-
-              <path
-                d={gearOuterPath}
-                transform="translate(0 -6)"
-                fill={`url(#${rimGradientId})`}
+            <div
+              className="absolute left-1/2 top-1/2 rounded-full"
+              style={{
+                width: knobMetrics.shell * 0.74,
+                height: knobMetrics.shell * 0.74,
+                transform: 'translate(-50%, -50%)',
+                background: 'linear-gradient(145deg, #f1f1f1 0%, #dcdcdc 52%, #cfcfcf 100%)',
+                boxShadow: '0 4px 7px rgba(0, 0, 0, 0.18)',
+              }}
+            />
+            {gearLobes.map((angle) => (
+              <div
+                key={angle}
+                className="absolute left-1/2 top-1/2 rounded-full"
+                style={{
+                  width: knobMetrics.lobe,
+                  height: knobMetrics.lobe,
+                  transform: `translate(-50%, -50%) rotate(${angle}deg) translateY(-${knobMetrics.lobeRadius}px)`,
+                  background: 'linear-gradient(145deg, #f3f3f3 0%, #dddddd 58%, #cecece 100%)',
+                  boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.52)',
+                }}
               />
-              <path
-                d={gearOuterPath}
-                transform="translate(0 -6)"
-                fill={`url(#${shineGradientId})`}
-                opacity="0.7"
+            ))}
+            <div
+              className="absolute left-1/2 top-1/2 rounded-full"
+              style={{
+                width: knobMetrics.face,
+                height: knobMetrics.face,
+                transform: 'translate(-50%, -50%)',
+                background: 'linear-gradient(160deg, #f5f5f5 0%, #e6e6e6 38%, #d0d0d0 100%)',
+                boxShadow: 'inset 0 1.2px 0 rgba(255,255,255,0.72), inset 0 -1.5px 2px rgba(0,0,0,0.08)',
+              }}
+            >
+              <div
+                className="absolute left-1/2 top-1/2 rounded-full"
+                style={{
+                  width: knobMetrics.ring,
+                  height: knobMetrics.ring,
+                  transform: 'translate(-50%, -50%)',
+                  border: `2.8px solid ${color}`,
+                }}
               />
-
-              <circle cx="50" cy="50" r="32" fill={`url(#${faceGradientId})`} />
-              <circle cx="50" cy="50" r="29.8" fill="none" stroke="rgba(255,255,255,0.55)" strokeWidth="1.2" />
-              <circle cx="50" cy="50" r="29.2" fill="none" stroke="rgba(0,0,0,0.07)" strokeWidth="0.8" />
-              <circle cx="50" cy="50" r="24.1" fill="none" stroke="#000000" strokeOpacity="0.05" strokeWidth="3.8" />
-              <circle cx="50" cy="50" r="24.1" fill="none" stroke={color} strokeOpacity="0.96" strokeWidth="2.8" />
-
-              <circle cx="50" cy="24.5" r="4.2" fill="#D9D9D9" fillOpacity="0.98" />
-              <circle cx="50" cy="24.5" r="2.75" fill={color} />
-              <ellipse cx="41.5" cy="32" rx="17" ry="12.5" fill={`url(#${glossGradientId})`} />
-            </svg>
+              <div
+                className="absolute left-1/2 top-1/2 rounded-full"
+                style={{
+                  width: knobMetrics.face * 0.46,
+                  height: knobMetrics.face * 0.34,
+                  transform: 'translate(-60%, -78%)',
+                  background: 'linear-gradient(180deg, rgba(255,255,255,0.42) 0%, rgba(255,255,255,0) 100%)',
+                  filter: 'blur(1px)',
+                }}
+              />
+            </div>
+            <div
+              className="absolute left-1/2 top-1/2"
+              style={{ transform: `translate(-50%, -50%) rotate(0deg)` }}
+            >
+              <div
+                className="rounded-full"
+                style={{
+                  width: knobMetrics.dot,
+                  height: knobMetrics.dot,
+                  transform: `translateY(-${knobMetrics.dotOrbit}px)`,
+                  backgroundColor: color,
+                  boxShadow: `0 0 0 2px rgba(255,255,255,0.2), 0 0 8px ${color}20`,
+                }}
+              />
+            </div>
           </motion.div>
         ) : (
           <div className="w-full h-full rounded-full bg-[#D0D0D0] relative flex items-center justify-center shadow-[2px_2px_4px_rgba(0,0,0,0.2),-2px_-2px_4px_rgba(255,255,255,0.4)] pointer-events-none">
@@ -189,7 +209,7 @@ const Knob = ({
           </div>
         )}
       </div>
-      <span className="text-[8.5px] font-bold uppercase tracking-widest text-black/85 pointer-events-none">{label}</span>
+      <span className={`${knobMetrics.labelClass} font-bold uppercase tracking-widest text-black/85 pointer-events-none`}>{label}</span>
     </div>
   );
 };
