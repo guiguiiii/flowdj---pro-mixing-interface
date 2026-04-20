@@ -40,12 +40,18 @@ import {
 } from './crossfader.js';
 import { getDeckOrbitDot } from './deckDisplay.js';
 
-const PlayPauseIcon = ({ size = 28, color = "#5B5B5B" }: { size?: number, color?: string }) => (
-  <svg width={size} height={(size * 18) / 28} viewBox="0 0 28 18" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-    <rect x="0.75" y="0.75" width="5.5" height="16.5" rx="2.75" fill={color} />
-    <rect x="8.75" y="0.75" width="5.5" height="16.5" rx="2.75" fill={color} />
-    <path d="M28 0L18 9L28 18V0Z" fill={color} />
-  </svg>
+const figmaPlayIconSrc = 'https://www.figma.com/api/mcp/asset/0ed6981b-0a24-4450-bc45-ed115813312b';
+
+const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: number }) => (
+  <img
+    src={figmaPlayIconSrc}
+    alt=""
+    width={width}
+    height={height}
+    className="block object-contain select-none pointer-events-none"
+    aria-hidden="true"
+    draggable={false}
+  />
 );
 
 const transportPlayButtonClassName =
