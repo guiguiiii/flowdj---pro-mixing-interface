@@ -132,10 +132,9 @@ const Knob = ({
         onPointerCancel={handlePointerCancel}
       >
         {variant === 'gear' ? (
-          <motion.div 
+          <div
             className="relative w-full h-full flex items-center justify-center pointer-events-none"
-            animate={{ rotate: rotation }}
-            transition={{ type: "spring", stiffness: 350, damping: 25 }}
+            style={{ transform: `rotate(${rotation}deg)` }}
           >
             <svg
               className="absolute inset-0 h-full w-full overflow-visible drop-shadow-[0_4px_8px_rgba(0,0,0,0.22)]"
@@ -161,17 +160,16 @@ const Knob = ({
                 <path d={dotPath} fill={color} />
               </g>
             </svg>
-          </motion.div>
+          </div>
         ) : (
           <div className="w-full h-full rounded-full bg-[#D0D0D0] relative flex items-center justify-center shadow-[2px_2px_4px_rgba(0,0,0,0.2),-2px_-2px_4px_rgba(255,255,255,0.4)] pointer-events-none">
             {/* Center-aligned indicator container */}
-            <motion.div 
+            <div
               className="absolute inset-0 flex items-start justify-center pt-2.5"
-              animate={{ rotate: (value - 50) * 2.4 }}
-              transition={{ type: "spring", stiffness: 350, damping: 25 }}
+              style={{ transform: `rotate(${(value - 50) * 2.4}deg)` }}
             >
               <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: color }} />
-            </motion.div>
+            </div>
             <div className="w-2.5 h-2.5 rounded-full bg-black/10" />
           </div>
         )}
