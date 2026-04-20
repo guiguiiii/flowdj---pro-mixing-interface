@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { 
   Play, 
   Pause, 
@@ -76,14 +76,18 @@ const Knob = ({
   const [isDragging, setIsDragging] = useState(false);
   const startY = useRef(0);
   const startValue = useRef(0);
-  const silverFillId = useId();
   const knobMetrics = size === 'sm'
-    ? { shell: 44, labelClass: 'text-[8.5px]', ring: 26, dotRadius: 3.9, dotY: 12.3, stroke: 2.6 }
-    : { shell: 56, labelClass: 'text-[9px]', ring: 33, dotRadius: 4.9, dotY: 15.5, stroke: 3.1 };
+    ? { shell: 46, labelClass: 'text-[8.5px]' }
+    : { shell: 58, labelClass: 'text-[9px]' };
   const rotation = (value - 50) * 2.4;
-  const silverFill = `url(#${silverFillId})`;
   const outerPath =
     'M50.9475 0.6064C54.1575 -0.8436 57.9475 0.3864 59.6975 3.4464C62.5575 8.4564 67.4275 11.9964 73.0675 13.1664C76.5175 13.8864 78.8575 17.1064 78.4775 20.6064C77.8475 26.3364 79.7075 32.0664 83.5875 36.3264C85.9575 38.9364 85.9575 42.9164 83.5875 45.5264C79.7075 49.7864 77.8475 55.5164 78.4775 61.2464C78.8675 64.7464 76.5275 67.9764 73.0675 68.6864C67.4275 69.8564 62.5475 73.3964 59.6975 78.4064C57.9475 81.4664 54.1675 82.6964 50.9475 81.2464C45.6975 78.8764 39.6775 78.8764 34.4175 81.2464C31.2075 82.6964 27.4175 81.4664 25.6675 78.4064C22.8075 73.3964 17.9375 69.8564 12.2975 68.6864C8.8475 67.9664 6.5075 64.7464 6.8875 61.2464C7.5175 55.5164 5.6575 49.7864 1.7775 45.5264C-0.5925 42.9164 -0.5925 38.9364 1.7775 36.3264C5.6575 32.0664 7.5175 26.3364 6.8875 20.6064C6.4975 17.1064 8.8375 13.8764 12.2975 13.1664C17.9375 11.9964 22.8175 8.4564 25.6675 3.4464C27.4175 0.3864 31.1975 -0.8436 34.4175 0.6064C39.6675 2.9764 45.6875 2.9764 50.9475 0.6064Z';
+  const ringPath =
+    'M42.6875 16.1365C56.3775 16.1365 67.4675 27.2365 67.4675 40.9165C67.4675 54.5965 56.3675 65.6965 42.6875 65.6965C29.0075 65.6965 17.9075 54.5965 17.9075 40.9165C17.9075 27.2365 29.0075 16.1365 42.6875 16.1365ZM42.6875 14.1365C27.9175 14.1365 15.9075 26.1465 15.9075 40.9165C15.9075 55.6865 27.9175 67.6965 42.6875 67.6965C57.4575 67.6965 69.4675 55.6865 69.4675 40.9165C69.4675 26.1465 57.4575 14.1365 42.6875 14.1365Z';
+  const innerFacePath =
+    'M42.6875 66.7065C28.4675 66.7065 16.9075 55.1365 16.9075 40.9265C16.9075 26.7165 28.4775 15.1465 42.6875 15.1465C56.8975 15.1465 68.4675 26.7165 68.4675 40.9265C68.4675 55.1365 56.8975 66.7065 42.6875 66.7065Z';
+  const dotPath =
+    'M42.6875 26.9864C44.383 26.9864 45.7575 25.6119 45.7575 23.9164C45.7575 22.2209 44.383 20.8464 42.6875 20.8464C40.992 20.8464 39.6175 22.2209 39.6175 23.9164C39.6175 25.6119 40.992 26.9864 42.6875 26.9864Z';
 
   const handlePointerDown = (e: React.PointerEvent) => {
     setIsDragging(true);
@@ -129,29 +133,14 @@ const Knob = ({
             transition={{ type: "spring", stiffness: 350, damping: 25 }}
           >
             <svg
-              className="absolute inset-0 h-full w-full overflow-visible drop-shadow-[1.5px_2.5px_4px_rgba(0,0,0,0.24)]"
+              className="absolute inset-0 h-full w-full overflow-visible drop-shadow-[0_4px_8px_rgba(0,0,0,0.22)]"
               viewBox="0 0 86 82"
               aria-hidden="true"
             >
-              <defs>
-                <linearGradient id={silverFillId} x1="13" y1="10" x2="70" y2="73" gradientUnits="userSpaceOnUse">
-                  <stop offset="0" stopColor="#F2F2F2" />
-                  <stop offset="0.45" stopColor="#E2E2E2" />
-                  <stop offset="0.78" stopColor="#D0D0D0" />
-                  <stop offset="1" stopColor="#C4C4C4" />
-                </linearGradient>
-              </defs>
-              <path d={outerPath} fill={silverFill} />
-              <path d={outerPath} fill="rgba(255,255,255,0.18)" />
-              <circle
-                cx="42.9"
-                cy="41"
-                r={knobMetrics.ring}
-                fill="none"
-                stroke={color}
-                strokeWidth={knobMetrics.stroke}
-              />
-              <circle cx="42.9" cy={knobMetrics.dotY + 6} r={knobMetrics.dotRadius} fill={color} />
+              <path d={outerPath} fill="#FFFFFF" />
+              <path d={innerFacePath} fill="#FFFFFF" />
+              <path d={ringPath} fill={color} />
+              <path d={dotPath} fill={color} />
             </svg>
           </motion.div>
         ) : (
@@ -693,7 +682,7 @@ export default function App() {
             {modeA === 'Mixer' && (
               <>
                 <Knob 
-                  label="Hi" color="#8bdb0e" value={mixerA.hi} variant="gear" 
+                  label="Hi" color="#95ED21" value={mixerA.hi} variant="gear" 
                   onChange={(val) => setMixerA(prev => ({ ...prev, hi: val }))} 
                 />
                 <Knob 
@@ -796,7 +785,7 @@ export default function App() {
             {modeB === 'Mixer' && (
               <>
                 <Knob 
-                  label="Hi" color="#8bdb0e" value={mixerB.hi} variant="gear" 
+                  label="Hi" color="#95ED21" value={mixerB.hi} variant="gear" 
                   onChange={(val) => setMixerB(prev => ({ ...prev, hi: val }))} 
                 />
                 <Knob 
