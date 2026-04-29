@@ -31,6 +31,8 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MOCK_TRACKS, Track } from './types';
+import { formatClock, formatRemainingTime } from './audio.js';
+import { findTrackById } from './library.js';
 import {
   getCrossfaderHandleLeft,
   getCrossfaderValueFromPointer,
@@ -58,6 +60,7 @@ const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: n
 const transportPlayButtonClassName =
   "w-14 h-10 rounded-[12px] flex items-center justify-center border border-white/10 bg-[#D0D0D0] shadow-[-2px_-2px_4px_rgba(78,78,78,0.12),2px_2px_4px_rgba(42,42,42,0.35)] transition-transform duration-150 hover:scale-[1.02] active:scale-95 active:shadow-[inset_-2px_-2px_4px_rgba(78,78,78,0.12),inset_2px_2px_4px_rgba(42,42,42,0.3)]";
 const orbitSpinClassName = 'motion-safe:animate-[spin_2s_linear_infinite]';
+const defaultDeckAudioState = { currentTime: 0, duration: 0, error: null as string | null };
 
 // --- UI Components ---
 
@@ -370,7 +373,23 @@ const VerticalWaveform = ({ color, active, bpm }: { color: string, active: boole
   </div>
 );
 
-const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: string, active: boolean, bpm: number, time: string, title: string, artist: string }) => {
+const DeckDisplay = ({
+  color,
+  active,
+  bpm,
+  time,
+  duration,
+  title,
+  artist,
+}: {
+  color: string,
+  active: boolean,
+  bpm: number,
+  time: string,
+  duration: string,
+  title: string,
+  artist: string,
+}) => {
   const orbitSize = 214;
   const orbitDotSize = 18;
   const orbitStartAngle = 45;
@@ -426,7 +445,7 @@ const DeckDisplay = ({ color, active, bpm, time, title, artist }: { color: strin
       <div className="flex flex-col items-center w-28 mt-2">
         <div className="w-full h-[3px] rounded-full mb-2" style={{ backgroundColor: color }} />
         <div className="text-[17px] font-mono font-bold text-black/90 tracking-tight">{time}</div>
-        <div className="text-[13px] font-mono font-bold text-black/50 leading-none">03:36.4</div>
+        <div className="text-[13px] font-mono font-bold text-black/50 leading-none">{duration}</div>
       </div>
 
       {/* Progress Ring */}
@@ -467,6 +486,77 @@ const VUMeter = ({ color, active }: { color: string, active: boolean }) => (
   </div>
 );
 
+const MusicLibraryModal = ({
+  deck,
+  isOpen,
+  tracks,
+  currentTrackId,
+  onClose,
+  onSelectTrack,
+}: {
+  deck: 'A' | 'B' | null;
+  isOpen: boolean;
+  tracks: Track[];
+  currentTrackId: string | null;
+  onClose: () => void;
+  onSelectTrack: (trackId: string) => void;
+}) => {
+  if (!isOpen || !deck) return null;
+
+  return (
+    <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/65 backdrop-blur-sm px-4">
+      <div className="w-full max-w-xl rounded-[28px] border border-white/10 bg-[#2E2E2E] shadow-[0_20px_60px_rgba(0,0,0,0.45)] overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-[#383838]">
+          <div>
+            <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">Deck {deck}</div>
+            <h2 className="text-white text-lg font-semibold">Music Library</h2>
+          </div>
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 rounded-full bg-white/8 text-white/75 text-xs font-bold uppercase tracking-[0.18em] hover:bg-white/12"
+          >
+            Close
+          </button>
+        </div>
+        <div className="p-4 grid gap-3 max-h-[70vh] overflow-y-auto">
+          {tracks.map((track) => {
+            const isActive = currentTrackId === track.id;
+
+            return (
+              <button
+                key={track.id}
+                onClick={() => onSelectTrack(track.id)}
+                className={`w-full rounded-[22px] border text-left p-3 transition-all ${isActive ? 'border-white/50 bg-white/12' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
+              >
+                <div className="flex items-center gap-3">
+                  <img
+                    src={track.artwork}
+                    alt={track.title}
+                    className="w-14 h-14 rounded-2xl object-cover shrink-0"
+                    referrerPolicy="no-referrer"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="min-w-0">
+                        <div className="text-white text-sm font-semibold truncate">{track.title}</div>
+                        <div className="text-white/50 text-[11px] uppercase tracking-[0.16em] truncate">{track.artist}</div>
+                      </div>
+                      <div className="text-right shrink-0">
+                        <div className="text-white/80 text-xs font-mono">{track.duration}</div>
+                        <div className="text-white/35 text-[10px] font-bold uppercase tracking-[0.12em]">{track.bpm} BPM</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
+
 // --- Main Application ---
 
 export default function App() {
@@ -474,7 +564,12 @@ export default function App() {
   const [trackB, setTrackB] = useState<Track | null>(MOCK_TRACKS[1]);
   const [isPlayingA, setIsPlayingA] = useState(false);
   const [isPlayingB, setIsPlayingB] = useState(false);
+  const [audioStateA, setAudioStateA] = useState(defaultDeckAudioState);
+  const [audioStateB, setAudioStateB] = useState(defaultDeckAudioState);
+  const [libraryDeck, setLibraryDeck] = useState<'A' | 'B' | null>(null);
   const [crossfader, setCrossfader] = useState(50);
+  const audioRefA = useRef<HTMLAudioElement>(null);
+  const audioRefB = useRef<HTMLAudioElement>(null);
   const crossfaderRef = useRef<HTMLDivElement>(null);
   const crossfaderHandleRef = useRef<HTMLDivElement>(null);
   const [isCrossfaderDragging, setIsCrossfaderDragging] = useState(false);
@@ -545,6 +640,142 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    const syncDeck = (
+      audio: HTMLAudioElement | null,
+      setTrack: React.Dispatch<React.SetStateAction<Track | null>>,
+      setAudioState: React.Dispatch<React.SetStateAction<typeof defaultDeckAudioState>>,
+      setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>,
+    ) => {
+      if (!audio) return () => {};
+
+      const updateTime = () => {
+        setAudioState((prev) => ({
+          ...prev,
+          currentTime: audio.currentTime,
+          duration: Number.isFinite(audio.duration) ? audio.duration : prev.duration,
+        }));
+      };
+
+      const updateMetadata = () => {
+        const duration = Number.isFinite(audio.duration) ? audio.duration : 0;
+
+        setAudioState((prev) => ({
+          ...prev,
+          duration,
+          error: null,
+        }));
+        setTrack((prev) => (
+          prev
+            ? {
+                ...prev,
+                duration: formatClock(duration),
+              }
+            : prev
+        ));
+      };
+
+      const handlePlay = () => {
+        setIsPlaying(true);
+        setAudioState((prev) => ({ ...prev, error: null }));
+      };
+
+      const handlePause = () => {
+        setIsPlaying(false);
+      };
+
+      const handleEnded = () => {
+        setIsPlaying(false);
+        setAudioState((prev) => ({ ...prev, currentTime: 0 }));
+      };
+
+      const handleError = () => {
+        setAudioState((prev) => ({
+          ...prev,
+          error: 'Audio failed to load',
+        }));
+        setIsPlaying(false);
+      };
+
+      audio.addEventListener('loadedmetadata', updateMetadata);
+      audio.addEventListener('timeupdate', updateTime);
+      audio.addEventListener('play', handlePlay);
+      audio.addEventListener('pause', handlePause);
+      audio.addEventListener('ended', handleEnded);
+      audio.addEventListener('error', handleError);
+
+      updateMetadata();
+      updateTime();
+
+      return () => {
+        audio.removeEventListener('loadedmetadata', updateMetadata);
+        audio.removeEventListener('timeupdate', updateTime);
+        audio.removeEventListener('play', handlePlay);
+        audio.removeEventListener('pause', handlePause);
+        audio.removeEventListener('ended', handleEnded);
+        audio.removeEventListener('error', handleError);
+      };
+    };
+
+    const cleanupA = syncDeck(audioRefA.current, setTrackA, setAudioStateA, setIsPlayingA);
+    const cleanupB = syncDeck(audioRefB.current, setTrackB, setAudioStateB, setIsPlayingB);
+
+    return () => {
+      cleanupA();
+      cleanupB();
+    };
+  }, []);
+
+  const toggleDeckPlayback = async (deck: 'A' | 'B') => {
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+
+    if (!audio) return;
+
+    if (audio.paused) {
+      try {
+        await audio.play();
+      } catch {
+        if (deck === 'A') {
+          setAudioStateA((prev) => ({ ...prev, error: 'Playback was blocked by the browser' }));
+        } else {
+          setAudioStateB((prev) => ({ ...prev, error: 'Playback was blocked by the browser' }));
+        }
+      }
+      return;
+    }
+
+    audio.pause();
+  };
+
+  const openLibrary = (deck: 'A' | 'B') => {
+    setLibraryDeck(deck);
+  };
+
+  const closeLibrary = () => {
+    setLibraryDeck(null);
+  };
+
+  const selectTrackForDeck = (deck: 'A' | 'B', trackId: string) => {
+    const selectedTrack = findTrackById(MOCK_TRACKS, trackId);
+
+    if (!selectedTrack) return;
+
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const setTrack = deck === 'A' ? setTrackA : setTrackB;
+    const setAudioState = deck === 'A' ? setAudioStateA : setAudioStateB;
+    const setIsPlaying = deck === 'A' ? setIsPlayingA : setIsPlayingB;
+
+    if (audio) {
+      audio.pause();
+      audio.currentTime = 0;
+    }
+
+    setTrack({ ...selectedTrack, duration: '00:00' });
+    setAudioState({ ...defaultDeckAudioState });
+    setIsPlaying(false);
+    closeLibrary();
+  };
+
   const updateCrossfaderFromPointer = (clientX: number) => {
     if (!crossfaderRef.current) return;
 
@@ -580,6 +811,12 @@ export default function App() {
 
   const orange = "#FF9457";
   const blue = "#2E8DFF";
+  const currentTimeA = formatClock(audioStateA.currentTime);
+  const currentTimeB = formatClock(audioStateB.currentTime);
+  const totalDurationA = trackA?.duration ?? '00:00';
+  const totalDurationB = trackB?.duration ?? '00:00';
+  const remainingTimeA = audioStateA.duration > 0 ? formatRemainingTime(audioStateA.currentTime, audioStateA.duration) : `-${totalDurationA}`;
+  const remainingTimeB = audioStateB.duration > 0 ? formatRemainingTime(audioStateB.currentTime, audioStateB.duration) : `-${totalDurationB}`;
   const crossfaderHandleLeft = getCrossfaderHandleLeft({
     value: crossfader,
     trackWidth: crossfaderMetrics.trackWidth,
@@ -636,20 +873,24 @@ export default function App() {
   const hotCuesB = hotCueBanks[hotCueBankB];
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans">
+    <div className="h-screen w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans relative">
       
       {/* 1. Header: Song Information & Global Controls - Further shrunk height and updated color */}
       <header className="h-16 grid grid-cols-[1fr_auto_1fr] bg-[#3C3C3C] shrink-0 z-50 border-b border-white/10">
         {/* Deck A Section */}
         <div className="flex bg-[#3C3C3C] relative overflow-hidden group border-r border-white/5">
           {/* Artwork - Flush with top and left */}
-          <div className="h-full aspect-square relative shrink-0">
+          <button
+            type="button"
+            onClick={() => openLibrary('A')}
+            className="h-full aspect-square relative shrink-0 cursor-pointer"
+          >
             <img src={trackA?.artwork} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Artwork A" />
             {/* Library Icon - Bottom Left of artwork */}
-            <button className="absolute bottom-0.5 left-0.5 w-5 h-5 rounded bg-black/60 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white transition-all active:scale-95 shadow-lg border border-white/10">
+            <span className="absolute bottom-0.5 left-0.5 w-5 h-5 rounded bg-black/60 backdrop-blur-md flex items-center justify-center text-white/70 shadow-lg border border-white/10">
               <ListMusic size={12} />
-            </button>
-          </div>
+            </span>
+          </button>
 
           {/* Info & Waveform Container */}
           <div className="flex-1 flex flex-col p-1.5 min-w-0">
@@ -661,7 +902,7 @@ export default function App() {
                   {trackA?.key}
                 </div>
               </div>
-              <div className="text-white text-[12px] font-mono font-bold tracking-tighter">-01:48</div>
+              <div className="text-white text-[12px] font-mono font-bold tracking-tighter">{remainingTimeA}</div>
             </div>
             
             {/* Artist Row */}
@@ -694,13 +935,17 @@ export default function App() {
         {/* Deck B Section */}
         <div className="flex flex-row-reverse bg-[#3C3C3C] relative overflow-hidden group border-l border-white/5">
           {/* Artwork - Flush with top and right */}
-          <div className="h-full aspect-square relative shrink-0">
+          <button
+            type="button"
+            onClick={() => openLibrary('B')}
+            className="h-full aspect-square relative shrink-0 cursor-pointer"
+          >
             <img src={trackB?.artwork} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Artwork B" />
             {/* Library Icon - Bottom Right of artwork */}
-            <button className="absolute bottom-0.5 right-0.5 w-5 h-5 rounded bg-black/60 backdrop-blur-md flex items-center justify-center text-white/70 hover:text-white transition-all active:scale-95 shadow-lg border border-white/10">
+            <span className="absolute bottom-0.5 right-0.5 w-5 h-5 rounded bg-black/60 backdrop-blur-md flex items-center justify-center text-white/70 shadow-lg border border-white/10">
               <ListMusic size={12} />
-            </button>
-          </div>
+            </span>
+          </button>
 
           {/* Info & Waveform Container */}
           <div className="flex-1 flex flex-col p-1.5 min-w-0 text-right">
@@ -712,7 +957,7 @@ export default function App() {
                   {trackB?.key}
                 </div>
               </div>
-              <div className="text-white text-[12px] font-mono font-bold tracking-tighter">-03:20</div>
+              <div className="text-white text-[12px] font-mono font-bold tracking-tighter">{remainingTimeB}</div>
             </div>
             
             {/* Artist Row */}
@@ -808,8 +1053,9 @@ export default function App() {
           <DeckDisplay 
             color={orange} 
             active={isPlayingA} 
-            bpm={122.0} 
-            time="01:19.7" 
+            bpm={trackA?.bpm ?? 0} 
+            time={currentTimeA}
+            duration={totalDurationA}
             title={trackA?.title || ""} 
             artist={trackA?.artist || ""} 
           />
@@ -817,10 +1063,10 @@ export default function App() {
 
         {/* Central Vertical Waveforms & VU Meters - Spanning 2 rows */}
         <div className="row-span-2 opz-panel flex overflow-hidden relative p-1 gap-1 min-w-0 border-x border-black/5">
-          <VerticalWaveform color={orange} active={isPlayingA} bpm={122.0} />
+          <VerticalWaveform color={orange} active={isPlayingA} bpm={trackA?.bpm ?? 0} />
           <VUMeter color={orange} active={isPlayingA} />
           <VUMeter color={blue} active={isPlayingB} />
-          <VerticalWaveform color={blue} active={isPlayingB} bpm={120.0} />
+          <VerticalWaveform color={blue} active={isPlayingB} bpm={trackB?.bpm ?? 0} />
           <div className="absolute inset-x-0 top-1/2 h-1 bg-white z-30 rounded-full" />
         </div>
 
@@ -829,8 +1075,9 @@ export default function App() {
           <DeckDisplay 
             color={blue} 
             active={isPlayingB} 
-            bpm={120.0} 
-            time="02:12.4" 
+            bpm={trackB?.bpm ?? 0} 
+            time={currentTimeB}
+            duration={totalDurationB}
             title={trackB?.title || ""} 
             artist={trackB?.artist || ""} 
           />
@@ -911,7 +1158,7 @@ export default function App() {
         <div className="opz-panel p-2 flex flex-col items-center gap-1.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#ADADAD' }}>
           <button className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-a shrink-0">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <div className="text-[14px] font-mono font-bold text-black/80">122.0</div>
+            <div className="text-[14px] font-mono font-bold text-black/80">{(trackA?.bpm ?? 0).toFixed(1)}</div>
             <div className="text-[9px] font-mono font-semibold text-black/35">{(pitchA - 50).toFixed(1)}%</div>
           </div>
           <div className="flex-1 flex items-center min-h-0 py-2">
@@ -1221,7 +1468,7 @@ export default function App() {
         <div className="opz-panel p-2 flex flex-col items-center gap-1.5 min-w-0 border-l border-black/5" style={{ backgroundColor: '#ADADAD' }}>
           <button className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-b shrink-0">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <div className="text-[14px] font-mono font-bold text-black/80">120.0</div>
+            <div className="text-[14px] font-mono font-bold text-black/80">{(trackB?.bpm ?? 0).toFixed(1)}</div>
             <div className="text-[9px] font-mono font-semibold text-black/35">{(pitchB - 50).toFixed(1)}%</div>
           </div>
           <div className="flex-1 flex items-center min-h-0 py-2">
@@ -1235,7 +1482,7 @@ export default function App() {
         {/* Left Controls */}
         <div className="flex items-center gap-3">
           <button 
-            onClick={() => setIsPlayingA(!isPlayingA)} 
+            onClick={() => void toggleDeckPlayback('A')} 
             className={transportPlayButtonClassName}
           >
             <PlayPauseIcon />
@@ -1296,13 +1543,27 @@ export default function App() {
             <div className="w-2.5 h-2.5 bg-[#FF3B30] rounded-full shadow-[0_0_10px_#FF3B30] group-hover:scale-110 transition-transform" />
           </button>
           <button 
-            onClick={() => setIsPlayingB(!isPlayingB)} 
+            onClick={() => void toggleDeckPlayback('B')} 
             className={transportPlayButtonClassName}
           >
             <PlayPauseIcon />
           </button>
         </div>
       </footer>
+
+      <audio ref={audioRefA} preload="metadata" src={trackA?.src} hidden />
+      <audio ref={audioRefB} preload="metadata" src={trackB?.src} hidden />
+      <MusicLibraryModal
+        deck={libraryDeck}
+        isOpen={libraryDeck !== null}
+        tracks={MOCK_TRACKS}
+        currentTrackId={libraryDeck === 'A' ? trackA?.id ?? null : trackB?.id ?? null}
+        onClose={closeLibrary}
+        onSelectTrack={(trackId) => {
+          if (!libraryDeck) return;
+          selectTrackForDeck(libraryDeck, trackId);
+        }}
+      />
 
     </div>
   );
