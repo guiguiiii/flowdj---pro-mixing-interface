@@ -884,25 +884,25 @@ export default function App() {
 
         {/* Named Hot Cues A */}
         <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
-          <div className="flex justify-between items-center shrink-0">
-            <div className="flex gap-3 text-[10px] font-bold uppercase tracking-[0.16em]">
+          <div className="flex justify-between items-center shrink-0 gap-2">
+            <div className="grid grid-cols-3 gap-2.5 text-[10px] font-bold uppercase tracking-[0.16em] flex-1 max-w-[320px]">
               <button
                 onClick={() => setPadModeA('hotCue')}
-                className={`border-b-2 ${padModeA === 'hotCue' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
+                className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeA === 'hotCue' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
                 style={padModeA === 'hotCue' ? { textShadow: '0 0 8px rgba(255, 148, 87, 0.85), 0 0 14px rgba(255, 148, 87, 0.45)' } : undefined}
               >
                 Hot Cue
               </button>
               <button
                 onClick={() => setPadModeA('padFx')}
-                className={`border-b-2 ${padModeA === 'padFx' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
+                className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeA === 'padFx' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
                 style={padModeA === 'padFx' ? { textShadow: '0 0 8px rgba(255, 148, 87, 0.85), 0 0 14px rgba(255, 148, 87, 0.45)' } : undefined}
               >
                 Pad FX
               </button>
               <button
                 onClick={() => setPadModeA('sample')}
-                className={`border-b-2 ${padModeA === 'sample' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
+                className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeA === 'sample' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
                 style={padModeA === 'sample' ? { textShadow: '0 0 8px rgba(255, 148, 87, 0.85), 0 0 14px rgba(255, 148, 87, 0.45)' } : undefined}
               >
                 Sample
@@ -990,25 +990,25 @@ export default function App() {
 
         {/* Named Hot Cues B */}
         <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-l border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
-          <div className="flex justify-between items-center shrink-0">
-            <div className="flex gap-3 text-[10px] font-bold uppercase tracking-[0.16em]">
+          <div className="flex justify-between items-center shrink-0 gap-2">
+            <div className="grid grid-cols-3 gap-2.5 text-[10px] font-bold uppercase tracking-[0.16em] flex-1 max-w-[320px]">
               <button
                 onClick={() => setPadModeB('hotCue')}
-                className={`border-b-2 ${padModeB === 'hotCue' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
+                className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeB === 'hotCue' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
                 style={padModeB === 'hotCue' ? { textShadow: '0 0 8px rgba(46, 141, 255, 0.9), 0 0 14px rgba(46, 141, 255, 0.5)' } : undefined}
               >
                 Hot Cue
               </button>
               <button
                 onClick={() => setPadModeB('padFx')}
-                className={`border-b-2 ${padModeB === 'padFx' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
+                className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeB === 'padFx' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
                 style={padModeB === 'padFx' ? { textShadow: '0 0 8px rgba(46, 141, 255, 0.9), 0 0 14px rgba(46, 141, 255, 0.5)' } : undefined}
               >
                 Pad FX
               </button>
               <button
                 onClick={() => setPadModeB('sample')}
-                className={`border-b-2 ${padModeB === 'sample' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
+                className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeB === 'sample' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
                 style={padModeB === 'sample' ? { textShadow: '0 0 8px rgba(46, 141, 255, 0.9), 0 0 14px rgba(46, 141, 255, 0.5)' } : undefined}
               >
                 Sample
