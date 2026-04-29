@@ -597,10 +597,14 @@ export default function App() {
     { id: 'r-echo-half', label: 'R.Echo', value: '1/2', accent: '#3852FF' },
   ];
   const sampleButtons = [
-    { label: 'Kick', accent: '#FF9457' },
-    { label: 'Snare', accent: '#FF3B7F' },
-    { label: 'Clap', accent: '#2E8DFF' },
-    { label: 'Vox', accent: '#7ED321' },
+    { id: 'kick', label: 'Kick', accent: '#FF9457' },
+    { id: 'snare', label: 'Snare', accent: '#FF3B7F' },
+    { id: 'clap', label: 'Clap', accent: '#2E8DFF' },
+    { id: 'vox', label: 'Vox', accent: '#7ED321' },
+    { id: 'hat', label: 'Hat', accent: '#FFD24A' },
+    { id: 'perc', label: 'Perc', accent: '#33D7FF' },
+    { id: 'ride', label: 'Ride', accent: '#A86BFF' },
+    { id: 'bass', label: 'Bass', accent: '#47D61A' },
   ];
 
   return (
@@ -973,19 +977,19 @@ export default function App() {
             ))}
             {padModeA === 'sample' && sampleButtons.map((sample) => (
               <button
-                key={sample.label}
-                onPointerDown={() => setActiveSampleA(sample.label)}
+                key={sample.id}
+                onPointerDown={() => setActiveSampleA(sample.id)}
                 onPointerUp={() => setActiveSampleA(null)}
                 onPointerLeave={() => setActiveSampleA(null)}
                 onPointerCancel={() => setActiveSampleA(null)}
                 className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                 style={{
-                  backgroundColor: activeSampleA === sample.label ? '#DADADA' : '#D0D0D0',
+                  backgroundColor: activeSampleA === sample.id ? '#DADADA' : '#D0D0D0',
                   borderColor: sample.accent,
-                  boxShadow: activeSampleA === sample.label
+                  boxShadow: activeSampleA === sample.id
                     ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${sample.accent}, 0 0 16px ${sample.accent}55, 0 0 24px ${sample.accent}33`
                     : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
-                  transform: activeSampleA === sample.label ? 'translateY(1px)' : 'translateY(0)',
+                  transform: activeSampleA === sample.id ? 'translateY(1px)' : 'translateY(0)',
                 }}
               >
                 <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
@@ -1082,19 +1086,19 @@ export default function App() {
             ))}
             {padModeB === 'sample' && sampleButtons.map((sample) => (
               <button
-                key={sample.label}
-                onPointerDown={() => setActiveSampleB(sample.label)}
+                key={sample.id}
+                onPointerDown={() => setActiveSampleB(sample.id)}
                 onPointerUp={() => setActiveSampleB(null)}
                 onPointerLeave={() => setActiveSampleB(null)}
                 onPointerCancel={() => setActiveSampleB(null)}
                 className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                 style={{
-                  backgroundColor: activeSampleB === sample.label ? '#DADADA' : '#D0D0D0',
+                  backgroundColor: activeSampleB === sample.id ? '#DADADA' : '#D0D0D0',
                   borderColor: sample.accent,
-                  boxShadow: activeSampleB === sample.label
+                  boxShadow: activeSampleB === sample.id
                     ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${sample.accent}, 0 0 16px ${sample.accent}55, 0 0 24px ${sample.accent}33`
                     : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
-                  transform: activeSampleB === sample.label ? 'translateY(1px)' : 'translateY(0)',
+                  transform: activeSampleB === sample.id ? 'translateY(1px)' : 'translateY(0)',
                 }}
               >
                 <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
