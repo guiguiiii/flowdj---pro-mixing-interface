@@ -885,7 +885,7 @@ export default function App() {
         {/* Named Hot Cues A */}
         <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
           <div className="flex justify-between items-center shrink-0 gap-2">
-            <div className="grid grid-cols-3 gap-2.5 text-[10px] font-bold uppercase tracking-[0.16em] flex-1 max-w-[320px]">
+            <div className="grid grid-cols-3 gap-2.5 text-[11px] font-bold uppercase tracking-[0.16em] flex-1 max-w-[320px]">
               <button
                 onClick={() => setPadModeA('hotCue')}
                 className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeA === 'hotCue' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
@@ -991,7 +991,7 @@ export default function App() {
         {/* Named Hot Cues B */}
         <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-l border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
           <div className="flex justify-between items-center shrink-0 gap-2">
-            <div className="grid grid-cols-3 gap-2.5 text-[10px] font-bold uppercase tracking-[0.16em] flex-1 max-w-[320px]">
+            <div className="grid grid-cols-3 gap-2.5 text-[11px] font-bold uppercase tracking-[0.16em] flex-1 max-w-[320px]">
               <button
                 onClick={() => setPadModeB('hotCue')}
                 className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeB === 'hotCue' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
