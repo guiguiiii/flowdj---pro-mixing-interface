@@ -30,9 +30,17 @@ import {
   Pencil,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MOCK_TRACKS, Track } from './types';
+import { Track } from './types';
 import { formatClock, formatRemainingTime } from './audio.js';
-import { findTrackById } from './library.js';
+import { findTrackById, updateTrackInLibrary } from './library.js';
+import { TRACK_LIBRARY } from './trackLibrary.js';
+import {
+  analyzeTrackWaveform,
+  EMPTY_WAVEFORM_PEAKS,
+  getWaveformProgress,
+} from './waveform.js';
+import { getDeckMixGains } from './mixer.js';
+import { getSyncedPlaybackRate } from './sync.js';
 import {
   getCrossfaderHandleLeft,
   getCrossfaderValueFromPointer,
@@ -61,6 +69,7 @@ const transportPlayButtonClassName =
   "w-14 h-10 rounded-[12px] flex items-center justify-center border border-white/10 bg-[#D0D0D0] shadow-[-2px_-2px_4px_rgba(78,78,78,0.12),2px_2px_4px_rgba(42,42,42,0.35)] transition-transform duration-150 hover:scale-[1.02] active:scale-95 active:shadow-[inset_-2px_-2px_4px_rgba(78,78,78,0.12),inset_2px_2px_4px_rgba(42,42,42,0.3)]";
 const orbitSpinClassName = 'motion-safe:animate-[spin_2s_linear_infinite]';
 const defaultDeckAudioState = { currentTime: 0, duration: 0, error: null as string | null };
+const defaultWaveformState = { peaks: EMPTY_WAVEFORM_PEAKS, duration: 0, status: 'idle' as 'idle' | 'loading' | 'ready' | 'error' };
 
 // --- UI Components ---
 
@@ -324,52 +333,99 @@ const VerticalFader = ({
   );
 };
 
-const HorizontalWaveform = ({ color, active }: { color: string, active: boolean }) => (
+const HorizontalWaveform = ({
+  color,
+  peaks,
+  progress,
+  isAnalyzing,
+}: {
+  color: string,
+  peaks: number[],
+  progress: number,
+  isAnalyzing: boolean,
+}) => (
   <div className="h-8 w-full bg-black/40 rounded border border-white/5 overflow-hidden relative">
-    <div className="absolute inset-0 flex items-center gap-0.5 px-1">
-      {Array.from({ length: 100 }).map((_, i) => (
-        <motion.div
-          key={i}
-          animate={{ height: active ? [4, Math.random() * 20 + 4, 4] : 4 }}
-          transition={{ repeat: Infinity, duration: 0.5 + Math.random() }}
-          className="w-0.5 rounded-full"
-          style={{ backgroundColor: color, opacity: active ? 0.6 : 0.2 }}
-        />
-      ))}
+    <div className="absolute inset-0 flex items-end gap-[1px] px-1 py-1">
+      {peaks.map((peak, i) => {
+        const barProgress = peaks.length > 1 ? i / (peaks.length - 1) : 0;
+        const isPlayed = barProgress <= progress;
+
+        return (
+          <div
+            key={`${i}-${peak}`}
+            className="flex-1 rounded-full transition-colors"
+            style={{
+              height: `${Math.max(peak, 0.08) * 100}%`,
+              backgroundColor: color,
+              opacity: isPlayed ? 0.95 : 0.28,
+              boxShadow: isPlayed ? `0 0 6px ${color}` : 'none',
+            }}
+          />
+        );
+      })}
     </div>
-    <div className="absolute left-1/2 top-0 bottom-0 w-px bg-white/40 z-10" />
+    <div className="absolute top-0 bottom-0 w-px bg-white/70 z-10" style={{ left: `calc(${progress * 100}% - 0.5px)` }} />
+    {isAnalyzing && (
+      <div className="absolute inset-0 flex items-center justify-center text-[9px] font-bold uppercase tracking-[0.18em] text-white/45 bg-black/20">
+        analyzing
+      </div>
+    )}
   </div>
 );
 
-const VerticalWaveform = ({ color, active, bpm }: { color: string, active: boolean, bpm: number }) => (
+const VerticalWaveform = ({
+  color,
+  bpm,
+  peaks,
+  progress,
+  isAnalyzing,
+}: {
+  color: string,
+  bpm: number,
+  peaks: number[],
+  progress: number,
+  isAnalyzing: boolean,
+}) => (
   <div className="flex-1 h-full relative bg-black/60 border-x border-white/5 overflow-hidden">
-    {/* BPM Header */}
     <div className="absolute top-0 inset-x-0 h-6 bg-black/90 flex items-center justify-center border-b border-white/10 z-20">
       <span className="text-[9px] font-mono font-bold" style={{ color }}>{bpm} BPM</span>
     </div>
-    
-    {/* Beat Markers */}
-    <div className="absolute inset-0 flex flex-col justify-around pointer-events-none opacity-10">
+
+    <div className="absolute inset-x-0 top-6 bottom-0 flex flex-col justify-around pointer-events-none opacity-10">
       {Array.from({ length: 24 }).map((_, i) => (
         <div key={i} className="w-full h-px bg-white" />
       ))}
     </div>
 
-    {/* Multi-color Frequency Waveform */}
-    <div className="absolute inset-0 flex flex-col items-center justify-around py-8">
-      {Array.from({ length: 100 }).map((_, i) => {
-        const freqColor = i % 5 === 0 ? '#ff3b30' : i % 3 === 0 ? '#4cd964' : color;
+    <div className="absolute inset-x-0 top-6 bottom-0 flex flex-col justify-between items-center py-2 px-2">
+      {peaks.map((peak, i) => {
+        const barProgress = peaks.length > 1 ? i / (peaks.length - 1) : 0;
+        const isPlayed = barProgress <= progress;
+
         return (
-          <motion.div
-            key={i}
-            animate={{ width: active ? [2, Math.random() * 70 + 5, 2] : 4 }}
-            transition={{ repeat: Infinity, duration: 0.2 + Math.random() * 0.4 }}
-            className="h-0.5 rounded-full"
-            style={{ backgroundColor: freqColor, opacity: active ? 0.9 : 0.2 }}
+          <div
+            key={`${i}-${peak}`}
+            className="h-[2px] rounded-full transition-colors"
+            style={{
+              width: `${Math.max(peak, 0.05) * 92}%`,
+              backgroundColor: color,
+              opacity: isPlayed ? 0.92 : 0.28,
+              boxShadow: isPlayed ? `0 0 7px ${color}` : 'none',
+            }}
           />
         );
       })}
     </div>
+
+    <div className="absolute left-0 right-0 top-6 bottom-0 pointer-events-none">
+      <div className="absolute left-0 right-0 h-px bg-white/70" style={{ top: `${progress * 100}%` }} />
+    </div>
+
+    {isAnalyzing && (
+      <div className="absolute inset-x-0 bottom-3 flex justify-center text-[9px] font-bold uppercase tracking-[0.16em] text-white/40">
+        analyzing
+      </div>
+    )}
   </div>
 );
 
@@ -379,6 +435,7 @@ const DeckDisplay = ({
   bpm,
   time,
   duration,
+  progress,
   title,
   artist,
 }: {
@@ -387,12 +444,14 @@ const DeckDisplay = ({
   bpm: number,
   time: string,
   duration: string,
+  progress: number,
   title: string,
   artist: string,
 }) => {
   const orbitSize = 214;
   const orbitDotSize = 18;
   const orbitStartAngle = 45;
+  const progressDashOffset = 304.7 * (1 - progress);
 
   return (
     <div className="flex flex-col items-center justify-center gap-1 w-full h-full relative p-1 min-w-0">
@@ -461,7 +520,7 @@ const DeckDisplay = ({
           cx="50" cy="50" r="48.5" 
           fill="none" stroke={color} strokeWidth="1.5" 
           strokeDasharray="304.7" 
-          animate={{ strokeDashoffset: active ? 100 : 304.7 }}
+          animate={{ strokeDashoffset: progressDashOffset }}
           strokeLinecap="round"
           className="transition-all duration-1000"
           style={{ rotate: -90, transformOrigin: '50% 50%' }}
@@ -560,21 +619,28 @@ const MusicLibraryModal = ({
 // --- Main Application ---
 
 export default function App() {
-  const [trackA, setTrackA] = useState<Track | null>(MOCK_TRACKS[0]);
-  const [trackB, setTrackB] = useState<Track | null>(MOCK_TRACKS[1]);
+  const [libraryTracks, setLibraryTracks] = useState<Track[]>(TRACK_LIBRARY);
+  const [trackAId, setTrackAId] = useState(TRACK_LIBRARY[0]?.id ?? '');
+  const [trackBId, setTrackBId] = useState(TRACK_LIBRARY[1]?.id ?? TRACK_LIBRARY[0]?.id ?? '');
   const [isPlayingA, setIsPlayingA] = useState(false);
   const [isPlayingB, setIsPlayingB] = useState(false);
   const [audioStateA, setAudioStateA] = useState(defaultDeckAudioState);
   const [audioStateB, setAudioStateB] = useState(defaultDeckAudioState);
   const [libraryDeck, setLibraryDeck] = useState<'A' | 'B' | null>(null);
+  const [waveformLibrary, setWaveformLibrary] = useState<Record<string, typeof defaultWaveformState>>({});
   const [crossfader, setCrossfader] = useState(50);
+  const [playbackRateA, setPlaybackRateA] = useState(1);
+  const [playbackRateB, setPlaybackRateB] = useState(1);
   const audioRefA = useRef<HTMLAudioElement>(null);
   const audioRefB = useRef<HTMLAudioElement>(null);
   const crossfaderRef = useRef<HTMLDivElement>(null);
   const crossfaderHandleRef = useRef<HTMLDivElement>(null);
   const [isCrossfaderDragging, setIsCrossfaderDragging] = useState(false);
   const [crossfaderMetrics, setCrossfaderMetrics] = useState({ trackWidth: 0, handleWidth: 0 });
+  const analyzedTrackIdsRef = useRef(new Set<string>());
   const [searchQuery, setSearchQuery] = useState('');
+  const trackA = findTrackById(libraryTracks, trackAId);
+  const trackB = findTrackById(libraryTracks, trackBId);
   
   const [modeA, setModeA] = useState('Mixer');
   const [modeB, setModeB] = useState('Mixer');
@@ -641,13 +707,56 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const analyzeTrack = async (track: Track) => {
+      setWaveformLibrary((prev) => ({
+        ...prev,
+        [track.id]: {
+          ...(prev[track.id] ?? defaultWaveformState),
+          status: 'loading',
+        },
+      }));
+
+      try {
+        const analysis = await analyzeTrackWaveform(track.src);
+
+        setWaveformLibrary((prev) => ({
+          ...prev,
+          [track.id]: {
+            peaks: analysis.peaks,
+            duration: analysis.duration,
+            status: 'ready',
+          },
+        }));
+        setLibraryTracks((prev) => updateTrackInLibrary(prev, track.id, { duration: formatClock(analysis.duration) }));
+      } catch {
+        setWaveformLibrary((prev) => ({
+          ...prev,
+          [track.id]: {
+            ...(prev[track.id] ?? defaultWaveformState),
+            status: 'error',
+          },
+        }));
+      }
+    };
+
+    libraryTracks.forEach((track) => {
+      if (analyzedTrackIdsRef.current.has(track.id)) {
+        return;
+      }
+
+      analyzedTrackIdsRef.current.add(track.id);
+      void analyzeTrack(track);
+    });
+  }, [libraryTracks]);
+
+  useEffect(() => {
     const syncDeck = (
       audio: HTMLAudioElement | null,
-      setTrack: React.Dispatch<React.SetStateAction<Track | null>>,
+      trackId: string,
       setAudioState: React.Dispatch<React.SetStateAction<typeof defaultDeckAudioState>>,
       setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>,
     ) => {
-      if (!audio) return () => {};
+      if (!audio || !trackId) return () => {};
 
       const updateTime = () => {
         setAudioState((prev) => ({
@@ -665,14 +774,7 @@ export default function App() {
           duration,
           error: null,
         }));
-        setTrack((prev) => (
-          prev
-            ? {
-                ...prev,
-                duration: formatClock(duration),
-              }
-            : prev
-        ));
+        setLibraryTracks((prev) => updateTrackInLibrary(prev, trackId, { duration: formatClock(duration) }));
       };
 
       const handlePlay = () => {
@@ -717,14 +819,38 @@ export default function App() {
       };
     };
 
-    const cleanupA = syncDeck(audioRefA.current, setTrackA, setAudioStateA, setIsPlayingA);
-    const cleanupB = syncDeck(audioRefB.current, setTrackB, setAudioStateB, setIsPlayingB);
+    const cleanupA = syncDeck(audioRefA.current, trackAId, setAudioStateA, setIsPlayingA);
+    const cleanupB = syncDeck(audioRefB.current, trackBId, setAudioStateB, setIsPlayingB);
 
     return () => {
       cleanupA();
       cleanupB();
     };
-  }, []);
+  }, [trackAId, trackBId]);
+
+  useEffect(() => {
+    const gains = getDeckMixGains({ crossfader, levelA, levelB });
+
+    if (audioRefA.current) {
+      audioRefA.current.volume = gains.deckA;
+    }
+
+    if (audioRefB.current) {
+      audioRefB.current.volume = gains.deckB;
+    }
+  }, [crossfader, levelA, levelB, trackAId, trackBId]);
+
+  useEffect(() => {
+    if (audioRefA.current) {
+      audioRefA.current.playbackRate = playbackRateA;
+    }
+  }, [playbackRateA, trackAId]);
+
+  useEffect(() => {
+    if (audioRefB.current) {
+      audioRefB.current.playbackRate = playbackRateB;
+    }
+  }, [playbackRateB, trackBId]);
 
   const toggleDeckPlayback = async (deck: 'A' | 'B') => {
     const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
@@ -756,24 +882,49 @@ export default function App() {
   };
 
   const selectTrackForDeck = (deck: 'A' | 'B', trackId: string) => {
-    const selectedTrack = findTrackById(MOCK_TRACKS, trackId);
+    const selectedTrack = findTrackById(libraryTracks, trackId);
 
     if (!selectedTrack) return;
 
     const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
-    const setTrack = deck === 'A' ? setTrackA : setTrackB;
     const setAudioState = deck === 'A' ? setAudioStateA : setAudioStateB;
     const setIsPlaying = deck === 'A' ? setIsPlayingA : setIsPlayingB;
+    const setTrackId = deck === 'A' ? setTrackAId : setTrackBId;
+    const setPlaybackRate = deck === 'A' ? setPlaybackRateA : setPlaybackRateB;
 
     if (audio) {
       audio.pause();
       audio.currentTime = 0;
+      audio.playbackRate = 1;
     }
 
-    setTrack({ ...selectedTrack, duration: '00:00' });
+    setTrackId(selectedTrack.id);
+    setPlaybackRate(1);
     setAudioState({ ...defaultDeckAudioState });
     setIsPlaying(false);
     closeLibrary();
+  };
+
+  const syncDeckToOther = (targetDeck: 'A' | 'B') => {
+    const sourceTrack = targetDeck === 'A' ? trackB : trackA;
+    const targetTrack = targetDeck === 'A' ? trackA : trackB;
+    const sourceIsPlaying = targetDeck === 'A' ? isPlayingB : isPlayingA;
+    const sourceBpm = (targetDeck === 'A' ? effectiveBpmB : effectiveBpmA);
+    const nextPlaybackRate = getSyncedPlaybackRate({
+      sourceIsPlaying,
+      sourceBpm,
+      targetBaseBpm: targetTrack?.bpm ?? 0,
+    });
+
+    if (sourceTrack == null || targetTrack == null || nextPlaybackRate == null) {
+      return;
+    }
+
+    if (targetDeck === 'A') {
+      setPlaybackRateA(nextPlaybackRate);
+    } else {
+      setPlaybackRateB(nextPlaybackRate);
+    }
   };
 
   const updateCrossfaderFromPointer = (clientX: number) => {
@@ -817,6 +968,14 @@ export default function App() {
   const totalDurationB = trackB?.duration ?? '00:00';
   const remainingTimeA = audioStateA.duration > 0 ? formatRemainingTime(audioStateA.currentTime, audioStateA.duration) : `-${totalDurationA}`;
   const remainingTimeB = audioStateB.duration > 0 ? formatRemainingTime(audioStateB.currentTime, audioStateB.duration) : `-${totalDurationB}`;
+  const effectiveBpmA = (trackA?.bpm ?? 0) * playbackRateA;
+  const effectiveBpmB = (trackB?.bpm ?? 0) * playbackRateB;
+  const pitchPercentA = (playbackRateA - 1) * 100;
+  const pitchPercentB = (playbackRateB - 1) * 100;
+  const progressA = getWaveformProgress(audioStateA.currentTime, audioStateA.duration || waveformLibrary[trackA?.id ?? '']?.duration || 0);
+  const progressB = getWaveformProgress(audioStateB.currentTime, audioStateB.duration || waveformLibrary[trackB?.id ?? '']?.duration || 0);
+  const waveformA = trackA ? (waveformLibrary[trackA.id] ?? defaultWaveformState) : defaultWaveformState;
+  const waveformB = trackB ? (waveformLibrary[trackB.id] ?? defaultWaveformState) : defaultWaveformState;
   const crossfaderHandleLeft = getCrossfaderHandleLeft({
     value: crossfader,
     trackWidth: crossfaderMetrics.trackWidth,
@@ -913,7 +1072,7 @@ export default function App() {
             {/* Waveform Area - Next to artwork */}
             <div className="flex-1 flex items-end">
               <div className="w-full h-5 opacity-90">
-                <HorizontalWaveform color={orange} active={isPlayingA} />
+                <HorizontalWaveform color={orange} peaks={waveformA.peaks} progress={progressA} isAnalyzing={waveformA.status === 'loading'} />
               </div>
             </div>
           </div>
@@ -968,7 +1127,7 @@ export default function App() {
             {/* Waveform Area - Next to artwork */}
             <div className="flex-1 flex items-end">
               <div className="w-full h-5 opacity-90">
-                <HorizontalWaveform color={blue} active={isPlayingB} />
+                <HorizontalWaveform color={blue} peaks={waveformB.peaks} progress={progressB} isAnalyzing={waveformB.status === 'loading'} />
               </div>
             </div>
           </div>
@@ -1053,9 +1212,10 @@ export default function App() {
           <DeckDisplay 
             color={orange} 
             active={isPlayingA} 
-            bpm={trackA?.bpm ?? 0} 
+            bpm={effectiveBpmA} 
             time={currentTimeA}
             duration={totalDurationA}
+            progress={progressA}
             title={trackA?.title || ""} 
             artist={trackA?.artist || ""} 
           />
@@ -1063,11 +1223,10 @@ export default function App() {
 
         {/* Central Vertical Waveforms & VU Meters - Spanning 2 rows */}
         <div className="row-span-2 opz-panel flex overflow-hidden relative p-1 gap-1 min-w-0 border-x border-black/5">
-          <VerticalWaveform color={orange} active={isPlayingA} bpm={trackA?.bpm ?? 0} />
+          <VerticalWaveform color={orange} bpm={effectiveBpmA} peaks={waveformA.peaks} progress={progressA} isAnalyzing={waveformA.status === 'loading'} />
           <VUMeter color={orange} active={isPlayingA} />
           <VUMeter color={blue} active={isPlayingB} />
-          <VerticalWaveform color={blue} active={isPlayingB} bpm={trackB?.bpm ?? 0} />
-          <div className="absolute inset-x-0 top-1/2 h-1 bg-white z-30 rounded-full" />
+          <VerticalWaveform color={blue} bpm={effectiveBpmB} peaks={waveformB.peaks} progress={progressB} isAnalyzing={waveformB.status === 'loading'} />
         </div>
 
         {/* Deck Display B */}
@@ -1075,9 +1234,10 @@ export default function App() {
           <DeckDisplay 
             color={blue} 
             active={isPlayingB} 
-            bpm={trackB?.bpm ?? 0} 
+            bpm={effectiveBpmB} 
             time={currentTimeB}
             duration={totalDurationB}
+            progress={progressB}
             title={trackB?.title || ""} 
             artist={trackB?.artist || ""} 
           />
@@ -1156,10 +1316,10 @@ export default function App() {
         {/* Row 2: Pitch, Hot Cues */}
         {/* Pitch A with Integrated Sync */}
         <div className="opz-panel p-2 flex flex-col items-center gap-1.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#ADADAD' }}>
-          <button className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-a shrink-0">Sync</button>
+          <button onClick={() => syncDeckToOther('A')} className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-a shrink-0">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <div className="text-[14px] font-mono font-bold text-black/80">{(trackA?.bpm ?? 0).toFixed(1)}</div>
-            <div className="text-[9px] font-mono font-semibold text-black/35">{(pitchA - 50).toFixed(1)}%</div>
+            <div className="text-[14px] font-mono font-bold text-black/80">{effectiveBpmA.toFixed(1)}</div>
+            <div className="text-[9px] font-mono font-semibold text-black/35">{pitchPercentA.toFixed(1)}%</div>
           </div>
           <div className="flex-1 flex items-center min-h-0 py-2">
             <VerticalFader value={pitchA} color={orange} height="h-40" handleSize="sm" handleOrientation="horizontal" onChange={setPitchA} />
@@ -1466,10 +1626,10 @@ export default function App() {
 
         {/* Pitch B with Integrated Sync */}
         <div className="opz-panel p-2 flex flex-col items-center gap-1.5 min-w-0 border-l border-black/5" style={{ backgroundColor: '#ADADAD' }}>
-          <button className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-b shrink-0">Sync</button>
+          <button onClick={() => syncDeckToOther('B')} className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-b shrink-0">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <div className="text-[14px] font-mono font-bold text-black/80">{(trackB?.bpm ?? 0).toFixed(1)}</div>
-            <div className="text-[9px] font-mono font-semibold text-black/35">{(pitchB - 50).toFixed(1)}%</div>
+            <div className="text-[14px] font-mono font-bold text-black/80">{effectiveBpmB.toFixed(1)}</div>
+            <div className="text-[9px] font-mono font-semibold text-black/35">{pitchPercentB.toFixed(1)}%</div>
           </div>
           <div className="flex-1 flex items-center min-h-0 py-2">
             <VerticalFader value={pitchB} color={blue} height="h-40" handleSize="sm" handleOrientation="horizontal" onChange={setPitchB} />
@@ -1556,7 +1716,7 @@ export default function App() {
       <MusicLibraryModal
         deck={libraryDeck}
         isOpen={libraryDeck !== null}
-        tracks={MOCK_TRACKS}
+        tracks={libraryTracks}
         currentTrackId={libraryDeck === 'A' ? trackA?.id ?? null : trackB?.id ?? null}
         onClose={closeLibrary}
         onSelectTrack={(trackId) => {
