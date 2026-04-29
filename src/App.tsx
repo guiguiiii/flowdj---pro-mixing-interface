@@ -5,8 +5,6 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { 
-  Play, 
-  Pause, 
   SkipBack, 
   SkipForward, 
   Music, 
@@ -40,17 +38,20 @@ import {
 } from './crossfader.js';
 import { getKnobValueFromHorizontalDrag } from './knob.js';
 
-const figmaPlayIconSrc = 'https://www.figma.com/api/mcp/asset/0ed6981b-0a24-4450-bc45-ed115813312b';
 const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: number }) => (
-  <img
-    src={figmaPlayIconSrc}
-    alt=""
+  <svg
     width={width}
     height={height}
-    className="block object-contain select-none pointer-events-none"
+    viewBox="0 0 28 18"
+    fill="none"
+    xmlns="http://www.w3.org/2000/svg"
+    className="block select-none pointer-events-none"
     aria-hidden="true"
-    draggable={false}
-  />
+  >
+    <rect x="1.5" y="1.5" width="4.5" height="15" rx="1.5" fill="#3C3C3C" />
+    <rect x="8.5" y="1.5" width="4.5" height="15" rx="1.5" fill="#3C3C3C" />
+    <path d="M16 1.5L26.5 9L16 16.5V1.5Z" fill="#3C3C3C" />
+  </svg>
 );
 
 const transportPlayButtonClassName =
