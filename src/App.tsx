@@ -497,6 +497,10 @@ export default function App() {
   const [selectedHotCueB, setSelectedHotCueB] = useState(0);
   const [padModeA, setPadModeA] = useState<'hotCue' | 'padFx' | 'sample'>('hotCue');
   const [padModeB, setPadModeB] = useState<'hotCue' | 'padFx' | 'sample'>('hotCue');
+  const [activePadFxA, setActivePadFxA] = useState<string | null>(null);
+  const [activePadFxB, setActivePadFxB] = useState<string | null>(null);
+  const [activeSampleA, setActiveSampleA] = useState<string | null>(null);
+  const [activeSampleB, setActiveSampleB] = useState<string | null>(null);
 
   const cycleMode = (current: string, direction: number) => {
     const idx = panelModes.indexOf(current);
@@ -942,8 +946,19 @@ export default function App() {
             {padModeA === 'padFx' && padFxButtons.map((pad) => (
               <button
                 key={pad.label}
-                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
-                style={{ backgroundColor: '#D0D0D0', borderColor: pad.accent, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)` }}
+                onPointerDown={() => setActivePadFxA(pad.label)}
+                onPointerUp={() => setActivePadFxA(null)}
+                onPointerLeave={() => setActivePadFxA(null)}
+                onPointerCancel={() => setActivePadFxA(null)}
+                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                style={{
+                  backgroundColor: activePadFxA === pad.label ? '#DADADA' : '#D0D0D0',
+                  borderColor: pad.accent,
+                  boxShadow: activePadFxA === pad.label
+                    ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${pad.accent}, 0 0 16px ${pad.accent}55, 0 0 24px ${pad.accent}33`
+                    : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
+                  transform: activePadFxA === pad.label ? 'translateY(1px)' : 'translateY(0)',
+                }}
               >
                 <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: pad.accent }}>{pad.label}</span>
               </button>
@@ -951,8 +966,19 @@ export default function App() {
             {padModeA === 'sample' && sampleButtons.map((sample) => (
               <button
                 key={sample.label}
-                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
-                style={{ backgroundColor: '#D0D0D0', borderColor: sample.accent, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)` }}
+                onPointerDown={() => setActiveSampleA(sample.label)}
+                onPointerUp={() => setActiveSampleA(null)}
+                onPointerLeave={() => setActiveSampleA(null)}
+                onPointerCancel={() => setActiveSampleA(null)}
+                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                style={{
+                  backgroundColor: activeSampleA === sample.label ? '#DADADA' : '#D0D0D0',
+                  borderColor: sample.accent,
+                  boxShadow: activeSampleA === sample.label
+                    ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${sample.accent}, 0 0 16px ${sample.accent}55, 0 0 24px ${sample.accent}33`
+                    : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
+                  transform: activeSampleA === sample.label ? 'translateY(1px)' : 'translateY(0)',
+                }}
               >
                 <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
               </button>
@@ -1026,8 +1052,19 @@ export default function App() {
             {padModeB === 'padFx' && padFxButtons.map((pad) => (
               <button
                 key={pad.label}
-                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
-                style={{ backgroundColor: '#D0D0D0', borderColor: pad.accent, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)` }}
+                onPointerDown={() => setActivePadFxB(pad.label)}
+                onPointerUp={() => setActivePadFxB(null)}
+                onPointerLeave={() => setActivePadFxB(null)}
+                onPointerCancel={() => setActivePadFxB(null)}
+                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                style={{
+                  backgroundColor: activePadFxB === pad.label ? '#DADADA' : '#D0D0D0',
+                  borderColor: pad.accent,
+                  boxShadow: activePadFxB === pad.label
+                    ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${pad.accent}, 0 0 16px ${pad.accent}55, 0 0 24px ${pad.accent}33`
+                    : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
+                  transform: activePadFxB === pad.label ? 'translateY(1px)' : 'translateY(0)',
+                }}
               >
                 <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: pad.accent }}>{pad.label}</span>
               </button>
@@ -1035,8 +1072,19 @@ export default function App() {
             {padModeB === 'sample' && sampleButtons.map((sample) => (
               <button
                 key={sample.label}
-                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)]"
-                style={{ backgroundColor: '#D0D0D0', borderColor: sample.accent, boxShadow: `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)` }}
+                onPointerDown={() => setActiveSampleB(sample.label)}
+                onPointerUp={() => setActiveSampleB(null)}
+                onPointerLeave={() => setActiveSampleB(null)}
+                onPointerCancel={() => setActiveSampleB(null)}
+                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                style={{
+                  backgroundColor: activeSampleB === sample.label ? '#DADADA' : '#D0D0D0',
+                  borderColor: sample.accent,
+                  boxShadow: activeSampleB === sample.label
+                    ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${sample.accent}, 0 0 16px ${sample.accent}55, 0 0 24px ${sample.accent}33`
+                    : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
+                  transform: activeSampleB === sample.label ? 'translateY(1px)' : 'translateY(0)',
+                }}
               >
                 <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
               </button>
