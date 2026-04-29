@@ -27,6 +27,7 @@ import {
   Plus,
   Minus,
   RotateCw,
+  Pencil,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MOCK_TRACKS, Track } from './types';
@@ -586,10 +587,14 @@ export default function App() {
     { slot: 'D', name: 'Drop', time: '01:32', color: '#A86BFF', glow: 'rgba(168, 107, 255, 0.24)' },
   ];
   const padFxButtons = [
-    { label: 'Echo', accent: '#FF9457' },
-    { label: 'Reverb', accent: '#7ED321' },
-    { label: 'Filter', accent: '#2E8DFF' },
-    { label: 'Roll', accent: '#A86BFF' },
+    { id: 'roll-half', label: 'Roll', value: '1/2', accent: '#33D7FF' },
+    { id: 'sweep-80', label: 'Sweep', value: '80', accent: '#31D8D0' },
+    { id: 'flanger-16', label: 'Flanger', value: '16', accent: '#23D2C3' },
+    { id: 'vbrake-three-quarter', label: 'V.Brake', value: '3/4', accent: '#2E5EFF' },
+    { id: 'echo-quarter', label: 'Echo', value: '1/4', accent: '#41B5FF' },
+    { id: 'echo-half', label: 'Echo', value: '1/2', accent: '#3AA8FF' },
+    { id: 'reverb-60', label: 'Reverb', value: '60', accent: '#47D61A' },
+    { id: 'r-echo-half', label: 'R.Echo', value: '1/2', accent: '#3852FF' },
   ];
   const sampleButtons = [
     { label: 'Kick', accent: '#FF9457' },
@@ -908,11 +913,10 @@ export default function App() {
                 Sample
               </button>
             </div>
-            <div className="flex gap-1">
-              {['1/8', '1/4', '1/2', '1'].map(l => (
-                <button key={l} className="px-1.5 py-0.5 rounded-lg neu-button text-[9px] font-bold text-black/65">{l}</button>
-              ))}
-            </div>
+            <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg neu-button text-[10px] font-bold uppercase tracking-[0.14em] text-black/65">
+              <Pencil size={11} strokeWidth={2.2} />
+              <span>Edit</span>
+            </button>
           </div>
           
           <div className="flex-1 grid grid-cols-4 gap-1 min-h-0">
@@ -945,22 +949,26 @@ export default function App() {
             ))}
             {padModeA === 'padFx' && padFxButtons.map((pad) => (
               <button
-                key={pad.label}
-                onPointerDown={() => setActivePadFxA(pad.label)}
+                key={pad.id}
+                onPointerDown={() => setActivePadFxA(pad.id)}
                 onPointerUp={() => setActivePadFxA(null)}
                 onPointerLeave={() => setActivePadFxA(null)}
                 onPointerCancel={() => setActivePadFxA(null)}
-                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                className="rounded-xl min-h-0 border-2 p-2 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                 style={{
-                  backgroundColor: activePadFxA === pad.label ? '#DADADA' : '#D0D0D0',
+                  backgroundColor: activePadFxA === pad.id ? '#DADADA' : '#D0D0D0',
                   borderColor: pad.accent,
-                  boxShadow: activePadFxA === pad.label
+                  boxShadow: activePadFxA === pad.id
                     ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${pad.accent}, 0 0 16px ${pad.accent}55, 0 0 24px ${pad.accent}33`
                     : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
-                  transform: activePadFxA === pad.label ? 'translateY(1px)' : 'translateY(0)',
+                  transform: activePadFxA === pad.id ? 'translateY(1px)' : 'translateY(0)',
                 }}
               >
-                <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: pad.accent }}>{pad.label}</span>
+                <div className="flex-1" />
+                <div className="leading-none space-y-1">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: pad.accent }}>{pad.label}</div>
+                  <div className="text-[16px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{pad.value}</div>
+                </div>
               </button>
             ))}
             {padModeA === 'sample' && sampleButtons.map((sample) => (
@@ -1014,11 +1022,10 @@ export default function App() {
                 Sample
               </button>
             </div>
-            <div className="flex gap-1">
-              {['1/8', '1/4', '1/2', '1'].map(l => (
-                <button key={l} className="px-1.5 py-0.5 rounded-lg neu-button text-[9px] font-bold text-black/65">{l}</button>
-              ))}
-            </div>
+            <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg neu-button text-[10px] font-bold uppercase tracking-[0.14em] text-black/65">
+              <Pencil size={11} strokeWidth={2.2} />
+              <span>Edit</span>
+            </button>
           </div>
           
           <div className="flex-1 grid grid-cols-4 gap-1 min-h-0">
@@ -1051,22 +1058,26 @@ export default function App() {
             ))}
             {padModeB === 'padFx' && padFxButtons.map((pad) => (
               <button
-                key={pad.label}
-                onPointerDown={() => setActivePadFxB(pad.label)}
+                key={pad.id}
+                onPointerDown={() => setActivePadFxB(pad.id)}
                 onPointerUp={() => setActivePadFxB(null)}
                 onPointerLeave={() => setActivePadFxB(null)}
                 onPointerCancel={() => setActivePadFxB(null)}
-                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                className="rounded-xl min-h-0 border-2 p-2 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                 style={{
-                  backgroundColor: activePadFxB === pad.label ? '#DADADA' : '#D0D0D0',
+                  backgroundColor: activePadFxB === pad.id ? '#DADADA' : '#D0D0D0',
                   borderColor: pad.accent,
-                  boxShadow: activePadFxB === pad.label
+                  boxShadow: activePadFxB === pad.id
                     ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${pad.accent}, 0 0 16px ${pad.accent}55, 0 0 24px ${pad.accent}33`
                     : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
-                  transform: activePadFxB === pad.label ? 'translateY(1px)' : 'translateY(0)',
+                  transform: activePadFxB === pad.id ? 'translateY(1px)' : 'translateY(0)',
                 }}
               >
-                <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: pad.accent }}>{pad.label}</span>
+                <div className="flex-1" />
+                <div className="leading-none space-y-1">
+                  <div className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: pad.accent }}>{pad.label}</div>
+                  <div className="text-[16px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{pad.value}</div>
+                </div>
               </button>
             ))}
             {padModeB === 'sample' && sampleButtons.map((sample) => (
