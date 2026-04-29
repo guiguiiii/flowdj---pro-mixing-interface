@@ -498,6 +498,10 @@ export default function App() {
   const [selectedHotCueB, setSelectedHotCueB] = useState(0);
   const [padModeA, setPadModeA] = useState<'hotCue' | 'padFx' | 'sample'>('hotCue');
   const [padModeB, setPadModeB] = useState<'hotCue' | 'padFx' | 'sample'>('hotCue');
+  const [padFxBankA, setPadFxBankA] = useState<'fx1' | 'fx2'>('fx1');
+  const [padFxBankB, setPadFxBankB] = useState<'fx1' | 'fx2'>('fx1');
+  const [sampleBankA, setSampleBankA] = useState<'s1' | 's2'>('s1');
+  const [sampleBankB, setSampleBankB] = useState<'s1' | 's2'>('s1');
   const [activePadFxA, setActivePadFxA] = useState<string | null>(null);
   const [activePadFxB, setActivePadFxB] = useState<string | null>(null);
   const [activeSampleA, setActiveSampleA] = useState<string | null>(null);
@@ -586,26 +590,38 @@ export default function App() {
     { slot: 'C', name: 'Build', time: '01:05', color: '#7ED321', glow: 'rgba(126, 211, 33, 0.24)' },
     { slot: 'D', name: 'Drop', time: '01:32', color: '#A86BFF', glow: 'rgba(168, 107, 255, 0.24)' },
   ];
-  const padFxButtons = [
-    { id: 'roll-half', label: 'Roll', value: '1/2', accent: '#33D7FF' },
-    { id: 'sweep-80', label: 'Sweep', value: '80', accent: '#31D8D0' },
-    { id: 'flanger-16', label: 'Flanger', value: '16', accent: '#23D2C3' },
-    { id: 'vbrake-three-quarter', label: 'V.Brake', value: '3/4', accent: '#2E5EFF' },
-    { id: 'echo-quarter', label: 'Echo', value: '1/4', accent: '#41B5FF' },
-    { id: 'echo-half', label: 'Echo', value: '1/2', accent: '#3AA8FF' },
-    { id: 'reverb-60', label: 'Reverb', value: '60', accent: '#47D61A' },
-    { id: 'r-echo-half', label: 'R.Echo', value: '1/2', accent: '#3852FF' },
-  ];
-  const sampleButtons = [
-    { id: 'kick', label: 'Kick', accent: '#FF9457' },
-    { id: 'snare', label: 'Snare', accent: '#FF3B7F' },
-    { id: 'clap', label: 'Clap', accent: '#2E8DFF' },
-    { id: 'vox', label: 'Vox', accent: '#7ED321' },
-    { id: 'hat', label: 'Hat', accent: '#FFD24A' },
-    { id: 'perc', label: 'Perc', accent: '#33D7FF' },
-    { id: 'ride', label: 'Ride', accent: '#A86BFF' },
-    { id: 'bass', label: 'Bass', accent: '#47D61A' },
-  ];
+  const padFxBanks = {
+    fx1: [
+      { id: 'roll-half', label: 'Roll', value: '1/2', accent: '#33D7FF' },
+      { id: 'sweep-80', label: 'Sweep', value: '80', accent: '#31D8D0' },
+      { id: 'flanger-16', label: 'Flanger', value: '16', accent: '#23D2C3' },
+      { id: 'vbrake-three-quarter', label: 'V.Brake', value: '3/4', accent: '#2E5EFF' },
+    ],
+    fx2: [
+      { id: 'echo-quarter', label: 'Echo', value: '1/4', accent: '#41B5FF' },
+      { id: 'echo-half', label: 'Echo', value: '1/2', accent: '#3AA8FF' },
+      { id: 'reverb-60', label: 'Reverb', value: '60', accent: '#47D61A' },
+      { id: 'r-echo-half', label: 'R.Echo', value: '1/2', accent: '#3852FF' },
+    ],
+  } as const;
+  const sampleBanks = {
+    s1: [
+      { id: 'kick', label: 'Kick', accent: '#FF9457' },
+      { id: 'snare', label: 'Snare', accent: '#FF3B7F' },
+      { id: 'clap', label: 'Clap', accent: '#2E8DFF' },
+      { id: 'vox', label: 'Vox', accent: '#7ED321' },
+    ],
+    s2: [
+      { id: 'hat', label: 'Hat', accent: '#FFD24A' },
+      { id: 'perc', label: 'Perc', accent: '#33D7FF' },
+      { id: 'ride', label: 'Ride', accent: '#A86BFF' },
+      { id: 'bass', label: 'Bass', accent: '#47D61A' },
+    ],
+  } as const;
+  const padFxButtonsA = padFxBanks[padFxBankA];
+  const padFxButtonsB = padFxBanks[padFxBankB];
+  const sampleButtonsA = sampleBanks[sampleBankA];
+  const sampleButtonsB = sampleBanks[sampleBankB];
 
   return (
     <div className="h-screen w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans">
@@ -917,10 +933,38 @@ export default function App() {
                 Sample
               </button>
             </div>
-            <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg neu-button text-[10px] font-bold uppercase tracking-[0.14em] text-black/65">
-              <Pencil size={11} strokeWidth={2.2} />
-              <span>Edit</span>
-            </button>
+            {padModeA === 'hotCue' && (
+              <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg neu-button text-[10px] font-bold uppercase tracking-[0.14em] text-black/65">
+                <Pencil size={11} strokeWidth={2.2} />
+                <span>Edit</span>
+              </button>
+            )}
+            {padModeA === 'padFx' && (
+              <div className="shrink-0 flex gap-1">
+                {(['fx1', 'fx2'] as const).map((bank) => (
+                  <button
+                    key={bank}
+                    onClick={() => setPadFxBankA(bank)}
+                    className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-[0.14em] transition-colors ${padFxBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                  >
+                    {bank.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
+            {padModeA === 'sample' && (
+              <div className="shrink-0 flex gap-1">
+                {(['s1', 's2'] as const).map((bank) => (
+                  <button
+                    key={bank}
+                    onClick={() => setSampleBankA(bank)}
+                    className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-[0.14em] transition-colors ${sampleBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                  >
+                    {bank.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           
           <div className="flex-1 grid grid-cols-4 gap-1 min-h-0">
@@ -951,7 +995,7 @@ export default function App() {
                 </div>
               </button>
             ))}
-            {padModeA === 'padFx' && padFxButtons.map((pad) => (
+            {padModeA === 'padFx' && padFxButtonsA.map((pad) => (
               <button
                 key={pad.id}
                 onPointerDown={() => setActivePadFxA(pad.id)}
@@ -975,7 +1019,7 @@ export default function App() {
                 </div>
               </button>
             ))}
-            {padModeA === 'sample' && sampleButtons.map((sample) => (
+            {padModeA === 'sample' && sampleButtonsA.map((sample) => (
               <button
                 key={sample.id}
                 onPointerDown={() => setActiveSampleA(sample.id)}
@@ -1026,10 +1070,38 @@ export default function App() {
                 Sample
               </button>
             </div>
-            <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg neu-button text-[10px] font-bold uppercase tracking-[0.14em] text-black/65">
-              <Pencil size={11} strokeWidth={2.2} />
-              <span>Edit</span>
-            </button>
+            {padModeB === 'hotCue' && (
+              <button className="shrink-0 flex items-center gap-1.5 px-2 py-1 rounded-lg neu-button text-[10px] font-bold uppercase tracking-[0.14em] text-black/65">
+                <Pencil size={11} strokeWidth={2.2} />
+                <span>Edit</span>
+              </button>
+            )}
+            {padModeB === 'padFx' && (
+              <div className="shrink-0 flex gap-1">
+                {(['fx1', 'fx2'] as const).map((bank) => (
+                  <button
+                    key={bank}
+                    onClick={() => setPadFxBankB(bank)}
+                    className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-[0.14em] transition-colors ${padFxBankB === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                  >
+                    {bank.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
+            {padModeB === 'sample' && (
+              <div className="shrink-0 flex gap-1">
+                {(['s1', 's2'] as const).map((bank) => (
+                  <button
+                    key={bank}
+                    onClick={() => setSampleBankB(bank)}
+                    className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-[0.14em] transition-colors ${sampleBankB === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                  >
+                    {bank.toUpperCase()}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           
           <div className="flex-1 grid grid-cols-4 gap-1 min-h-0">
@@ -1060,7 +1132,7 @@ export default function App() {
                 </div>
               </button>
             ))}
-            {padModeB === 'padFx' && padFxButtons.map((pad) => (
+            {padModeB === 'padFx' && padFxButtonsB.map((pad) => (
               <button
                 key={pad.id}
                 onPointerDown={() => setActivePadFxB(pad.id)}
@@ -1084,7 +1156,7 @@ export default function App() {
                 </div>
               </button>
             ))}
-            {padModeB === 'sample' && sampleButtons.map((sample) => (
+            {padModeB === 'sample' && sampleButtonsB.map((sample) => (
               <button
                 key={sample.id}
                 onPointerDown={() => setActiveSampleB(sample.id)}
