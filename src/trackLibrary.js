@@ -37,4 +37,12 @@ export const TRACK_LIBRARY = [
     key: '5B',
     src: '/audio/suitcase-jeremy-black.mp3',
   }),
+  createLibraryTrack({
+    id: 'i-might-be-late',
+    title: 'I Might Be Late',
+    artist: 'Local Track',
+    bpm: 120,
+    key: '8A',
+    src: '/audio/i-might-be-late.mp3',
+  }),
 ];

@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useId, useRef, useState } from 'react';
 import { 
   SkipBack, 
   SkipForward, 
@@ -31,13 +31,26 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Track } from './types';
+import {
+  buildTrackAnalysisEntry,
+  hydrateTracksWithAnalysis,
+  loadTrackAnalysisCache,
+  saveTrackAnalysisCache,
+} from './analysisCache.js';
 import { formatClock, formatRemainingTime } from './audio.js';
 import { findTrackById, updateTrackInLibrary } from './library.js';
 import { TRACK_LIBRARY } from './trackLibrary.js';
 import {
   analyzeTrackWaveform,
   EMPTY_WAVEFORM_PEAKS,
+  getDisplayedWaveformPeaks,
+  getPlaybackLineWaveformFrame,
+  getVerticalWaveformTranslateY,
+  getWaveformBandWidths,
+  getWaveformBeatWindowSize,
   getWaveformProgress,
+  normalizeWaveformPeaks,
+  shapeWaveformForDisplay,
 } from './waveform.js';
 import { getDeckMixGains } from './mixer.js';
 import { getSyncedPlaybackRate } from './sync.js';
@@ -69,7 +82,153 @@ const transportPlayButtonClassName =
   "w-14 h-10 rounded-[12px] flex items-center justify-center border border-white/10 bg-[#D0D0D0] shadow-[-2px_-2px_4px_rgba(78,78,78,0.12),2px_2px_4px_rgba(42,42,42,0.35)] transition-transform duration-150 hover:scale-[1.02] active:scale-95 active:shadow-[inset_-2px_-2px_4px_rgba(78,78,78,0.12),inset_2px_2px_4px_rgba(42,42,42,0.3)]";
 const orbitSpinClassName = 'motion-safe:animate-[spin_2s_linear_infinite]';
 const defaultDeckAudioState = { currentTime: 0, duration: 0, error: null as string | null };
-const defaultWaveformState = { peaks: EMPTY_WAVEFORM_PEAKS, duration: 0, status: 'idle' as 'idle' | 'loading' | 'ready' | 'error' };
+const defaultWaveformState = {
+  peaks: EMPTY_WAVEFORM_PEAKS,
+  displayPeaks: EMPTY_WAVEFORM_PEAKS,
+  duration: 0,
+  status: 'idle' as 'idle' | 'loading' | 'ready' | 'error',
+};
+const analysisWaveformPalette = {
+  outer: '#1D6FFF',
+  mid: '#C97A12',
+  core: '#FFF5DD',
+  spine: '#FFF9EA',
+} as const;
+const getBrowserStorage = () => (typeof window === 'undefined' ? undefined : window.localStorage);
+const getInitialAnalysisCache = () => loadTrackAnalysisCache(getBrowserStorage());
+const getInitialWaveformLibrary = () => {
+  const cachedAnalysis = getInitialAnalysisCache();
+
+  return Object.fromEntries(
+    Object.entries(cachedAnalysis).map(([trackId, analysis]: [string, any]) => {
+      const peaks = normalizeWaveformPeaks(analysis.peaks, EMPTY_WAVEFORM_PEAKS.length);
+
+      return [
+        trackId,
+        {
+          peaks,
+          displayPeaks: shapeWaveformForDisplay(peaks),
+          duration: analysis.duration ?? 0,
+          status: 'ready' as const,
+        },
+      ];
+    }),
+  );
+};
+type WaveformPoint = {
+  peak: number,
+  energy: number,
+  low: number,
+  mid: number,
+  high: number,
+};
+const emphasizeWaveformContrast = (value: number, exponent = 1.8, floor = 0) => {
+  const normalized = Math.max(value - floor, 0);
+  return Math.pow(normalized, exponent);
+};
+
+const buildWaveformPoints = (
+  peaks: WaveformPoint[],
+  sampleKey: 'peak' | 'energy',
+  width: number,
+  height: number,
+  floor = 0,
+  exponent = 1.8,
+) => {
+  if (!peaks.length) {
+    return `0,${height} ${width},${height}`;
+  }
+
+  return peaks
+    .map((point, index) => {
+      const x = peaks.length === 1 ? width / 2 : (index / (peaks.length - 1)) * width;
+      const amplitude = emphasizeWaveformContrast(point[sampleKey], exponent, floor);
+      const y = height - amplitude * height;
+      return `${x.toFixed(2)},${Math.max(0, y).toFixed(2)}`;
+    })
+    .join(' ');
+};
+
+const buildWaveformSpikePoints = (
+  peaks: WaveformPoint[],
+  width: number,
+  height: number,
+) => {
+  if (!peaks.length) {
+    return `0,${height} ${width},${height}`;
+  }
+
+  const points: string[] = [];
+
+  peaks.forEach((point, index) => {
+    const x = peaks.length === 1 ? width / 2 : (index / (peaks.length - 1)) * width;
+    const amplitude = emphasizeWaveformContrast(point.peak, 1.05, 0) * height;
+    const y = Math.max(height - amplitude, 0);
+
+    points.push(`${x.toFixed(2)},${y.toFixed(2)}`);
+  });
+
+  return points.join(' ');
+};
+
+const buildVerticalWaveformLayerPath = (
+  widths: number[],
+  centerX: number,
+  rowStep: number,
+  minHalfWidth = 0,
+) => {
+  if (!widths.length) {
+    return '';
+  }
+
+  const leftPoints: string[] = [];
+  const rightPoints: string[] = [];
+
+  widths.forEach((width, index) => {
+    const y = index * rowStep;
+    const halfWidth = width > 0 ? Math.max(width, minHalfWidth) : 0;
+    leftPoints.push(`${(centerX - halfWidth).toFixed(2)},${y.toFixed(2)}`);
+    rightPoints.push(`${(centerX + halfWidth).toFixed(2)},${y.toFixed(2)}`);
+  });
+
+  const lastY = ((widths.length - 1) * rowStep + rowStep * 0.9).toFixed(2);
+  const firstWidth = widths[0] > 0 ? Math.max(widths[0], minHalfWidth) : 0;
+  const lastWidth = widths[widths.length - 1] > 0 ? Math.max(widths[widths.length - 1], minHalfWidth) : 0;
+
+  return [
+    `M ${(centerX - firstWidth).toFixed(2)} 0`,
+    ...leftPoints.slice(1).map((point) => `L ${point}`),
+    `L ${(centerX - lastWidth).toFixed(2)} ${lastY}`,
+    `L ${(centerX + lastWidth).toFixed(2)} ${lastY}`,
+    ...rightPoints.reverse().map((point) => `L ${point}`),
+    'Z',
+  ].join(' ');
+};
+
+const getVerticalWaveformBandGradientStops = (peaks: WaveformPoint[]) => {
+  if (!peaks.length) {
+    return [
+      { offset: '0%', color: '#1D6FFF', opacity: 0.95 },
+      { offset: '100%', color: '#1D6FFF', opacity: 0.95 },
+    ];
+  }
+
+  return peaks.map((point, index) => {
+    const offset = peaks.length === 1 ? '0%' : `${((index / (peaks.length - 1)) * 100).toFixed(2)}%`;
+    const warmMix = Math.min(point.mid * 0.85 + point.high * 0.75, 1);
+    const coolMix = Math.min(point.low * 1.15 + point.energy * 0.35, 1);
+    const r = Math.round(25 + warmMix * 230);
+    const g = Math.round(96 + point.energy * 90 + point.mid * 35);
+    const b = Math.round(72 + coolMix * 175);
+    const opacity = Number((0.74 + point.peak * 0.24).toFixed(3));
+
+    return {
+      offset,
+      color: `rgb(${Math.min(r, 255)} ${Math.min(g, 255)} ${Math.min(b, 255)})`,
+      opacity,
+    };
+  });
+};
 
 // --- UI Components ---
 
@@ -334,100 +493,139 @@ const VerticalFader = ({
 };
 
 const HorizontalWaveform = ({
-  color,
   peaks,
   progress,
   isAnalyzing,
 }: {
-  color: string,
-  peaks: number[],
+  peaks: WaveformPoint[],
   progress: number,
   isAnalyzing: boolean,
-}) => (
-  <div className="h-8 w-full bg-black/40 rounded border border-white/5 overflow-hidden relative">
-    <div className="absolute inset-0 flex items-end gap-[1px] px-1 py-1">
-      {peaks.map((peak, i) => {
-        const barProgress = peaks.length > 1 ? i / (peaks.length - 1) : 0;
-        const isPlayed = barProgress <= progress;
+}) => {
+  const width = 560;
+  const height = 72;
+  const basePolygon = `0,${height} ${buildWaveformPoints(peaks, 'peak', width, height, 0.035, 1.55)} ${width},${height}`;
+  const innerPolygon = `0,${height} ${buildWaveformPoints(peaks, 'energy', width, height * 0.94, 0.015, 1.15)} ${width},${height}`;
+  const spikePolyline = buildWaveformSpikePoints(peaks, width, height * 0.92);
+  const playedWidth = Math.max(progress * width, 0);
 
-        return (
-          <div
-            key={`${i}-${peak}`}
-            className="flex-1 rounded-full transition-colors"
-            style={{
-              height: `${Math.max(peak, 0.08) * 100}%`,
-              backgroundColor: color,
-              opacity: isPlayed ? 0.95 : 0.28,
-              boxShadow: isPlayed ? `0 0 6px ${color}` : 'none',
-            }}
-          />
-        );
-      })}
+  return (
+    <div className="h-full w-full bg-black rounded-[3px] border border-white/10 overflow-hidden relative">
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(0,0,0,0.24))]" />
+      <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+        <polygon points={basePolygon} fill={analysisWaveformPalette.outer} opacity="0.98" />
+        <polygon points={innerPolygon} fill={analysisWaveformPalette.mid} opacity="0.92" />
+        <polyline points={spikePolyline} fill="none" stroke={analysisWaveformPalette.core} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" opacity="0.98" />
+      </svg>
+      <div className="absolute top-0 bottom-0 w-[2px] bg-[#FF4A4A] z-10 shadow-[0_0_10px_rgba(255,74,74,0.45)]" style={{ left: `calc(${progress * 100}% - 1px)` }} />
+      {isAnalyzing && (
+        <div className="absolute inset-0 flex items-center justify-center text-[9px] font-bold uppercase tracking-[0.18em] text-white/45 bg-black/20">
+          analyzing
+        </div>
+      )}
     </div>
-    <div className="absolute top-0 bottom-0 w-px bg-white/70 z-10" style={{ left: `calc(${progress * 100}% - 0.5px)` }} />
-    {isAnalyzing && (
-      <div className="absolute inset-0 flex items-center justify-center text-[9px] font-bold uppercase tracking-[0.18em] text-white/45 bg-black/20">
-        analyzing
-      </div>
-    )}
-  </div>
-);
+  );
+};
 
 const VerticalWaveform = ({
-  color,
-  bpm,
   peaks,
-  progress,
+  offset,
   isAnalyzing,
 }: {
-  color: string,
-  bpm: number,
-  peaks: number[],
-  progress: number,
+  peaks: WaveformPoint[],
+  offset: number,
   isAnalyzing: boolean,
-}) => (
-  <div className="flex-1 h-full relative bg-black/60 border-x border-white/5 overflow-hidden">
-    <div className="absolute top-0 inset-x-0 h-6 bg-black/90 flex items-center justify-center border-b border-white/10 z-20">
-      <span className="text-[9px] font-mono font-bold" style={{ color }}>{bpm} BPM</span>
-    </div>
+}) => {
+  const rowStep = 10;
+  const svgWidth = 164;
+  const svgHeight = Math.max(peaks.length * rowStep, rowStep);
+  const gradientUid = useId();
+  const centerX = svgWidth / 2;
+  const maxHalfWidth = svgWidth / 2;
+  const splitIndex = Math.floor(peaks.length / 2);
+  const playbackRowIndex = Math.min(splitIndex, Math.max(peaks.length - 1, 0));
+  const pastPeaks = peaks.slice(0, playbackRowIndex + 1);
+  const futurePeaks = peaks.slice(playbackRowIndex);
+  const buildSegmentPaths = (segmentPeaks: WaveformPoint[]) => {
+    const widths = segmentPeaks.map((point) => getWaveformBandWidths(point, maxHalfWidth));
 
-    <div className="absolute inset-x-0 top-6 bottom-0 flex flex-col justify-around pointer-events-none opacity-10">
-      {Array.from({ length: 24 }).map((_, i) => (
-        <div key={i} className="w-full h-px bg-white" />
-      ))}
-    </div>
+    return {
+      outer: buildVerticalWaveformLayerPath(widths.map((item) => item.outer), centerX, rowStep, 0.75),
+      bass: buildVerticalWaveformLayerPath(widths.map((item) => Math.min(item.bass, item.outer * 0.34)), centerX, rowStep, 0.2),
+      mid: buildVerticalWaveformLayerPath(widths.map((item) => Math.min(item.mid, item.outer * 0.72)), centerX, rowStep, 0.45),
+      core: buildVerticalWaveformLayerPath(widths.map((item) => Math.min(item.core, item.mid * 0.58)), centerX, rowStep, 0.18),
+    };
+  };
+  const pastPaths = buildSegmentPaths(pastPeaks);
+  const futurePaths = buildSegmentPaths(futurePeaks);
+  const spinePoints = peaks
+    .map((point, index) => {
+      const y = index * rowStep;
+      const drift = (point.high - point.low) * (svgWidth * 0.028);
+      return `${(svgWidth / 2 + drift).toFixed(2)},${y.toFixed(2)}`;
+    })
+    .join(' ');
+  const gradientId = `vertical-waveform-${gradientUid.replace(/:/g, '')}`;
+  const gradientStops = getVerticalWaveformBandGradientStops(peaks);
+  const translateY = getVerticalWaveformTranslateY(playbackRowIndex, rowStep, offset);
 
-    <div className="absolute inset-x-0 top-6 bottom-0 flex flex-col justify-between items-center py-2 px-2">
-      {peaks.map((peak, i) => {
-        const barProgress = peaks.length > 1 ? i / (peaks.length - 1) : 0;
-        const isPlayed = barProgress <= progress;
-
-        return (
-          <div
-            key={`${i}-${peak}`}
-            className="h-[2px] rounded-full transition-colors"
-            style={{
-              width: `${Math.max(peak, 0.05) * 92}%`,
-              backgroundColor: color,
-              opacity: isPlayed ? 0.92 : 0.28,
-              boxShadow: isPlayed ? `0 0 7px ${color}` : 'none',
-            }}
-          />
-        );
-      })}
-    </div>
-
-    <div className="absolute left-0 right-0 top-6 bottom-0 pointer-events-none">
-      <div className="absolute left-0 right-0 h-px bg-white/70" style={{ top: `${progress * 100}%` }} />
-    </div>
-
-    {isAnalyzing && (
-      <div className="absolute inset-x-0 bottom-3 flex justify-center text-[9px] font-bold uppercase tracking-[0.16em] text-white/40">
-        analyzing
+  return (
+    <div className="flex-1 h-full relative bg-black border-x border-white/5 overflow-hidden">
+      <div className="absolute inset-x-0 top-0 bottom-0 pointer-events-none">
+        <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 bg-[#FF4A4A] shadow-[0_0_8px_rgba(255,74,74,0.35)]" />
+        <div className="absolute left-0 right-0 top-1/4 h-px bg-white/55" />
+        <div className="absolute left-0 right-0 top-3/4 h-px bg-white/55" />
       </div>
-    )}
-  </div>
-);
+
+      <div className="absolute inset-0 overflow-hidden">
+        <div
+          className="absolute inset-x-0 top-1/2 px-2.5 will-change-transform"
+          style={{ transform: `translateY(${translateY}px)` }}
+        >
+          <svg
+            viewBox={`0 0 ${svgWidth} ${svgHeight}`}
+            preserveAspectRatio="none"
+            className="block w-full"
+            style={{ height: `${svgHeight}px` }}
+          >
+            <defs>
+              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2={svgHeight} gradientUnits="userSpaceOnUse">
+                {gradientStops.map((stop) => (
+                  <stop
+                    key={`${gradientId}-${stop.offset}`}
+                    offset={stop.offset}
+                    stopColor={stop.color}
+                    stopOpacity={stop.opacity}
+                  />
+                ))}
+              </linearGradient>
+            </defs>
+            <g>
+              <path d={pastPaths.outer} fill={`url(#${gradientId})`} opacity="0.98" />
+              <path d={pastPaths.bass} fill="#0D63FF" opacity="0.84" />
+              <path d={pastPaths.mid} fill="#D58A18" opacity="0.94" />
+              <path d={pastPaths.core} fill="#FFF4D9" opacity="0.99" />
+            </g>
+            <g transform={`translate(0 ${(playbackRowIndex * rowStep).toFixed(2)})`}>
+              <path d={futurePaths.outer} fill={`url(#${gradientId})`} opacity="0.98" />
+              <path d={futurePaths.bass} fill="#0D63FF" opacity="0.84" />
+              <path d={futurePaths.mid} fill="#D58A18" opacity="0.94" />
+              <path d={futurePaths.core} fill="#FFF4D9" opacity="0.99" />
+            </g>
+            <polyline points={spinePoints} fill="none" stroke={analysisWaveformPalette.spine} strokeWidth="1.1" opacity="0.42" />
+          </svg>
+        </div>
+        <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(180deg,rgba(0,0,0,0),rgba(0,0,0,0.88)_38%,rgba(0,0,0,0.96)_72%,rgba(0,0,0,1))] pointer-events-none" />
+        <div className="absolute inset-x-0 top-0 h-10 bg-[linear-gradient(180deg,rgba(0,0,0,1),rgba(0,0,0,0.82)_45%,rgba(0,0,0,0))] pointer-events-none" />
+      </div>
+
+      {isAnalyzing && (
+        <div className="absolute inset-x-0 bottom-3 flex justify-center text-[9px] font-bold uppercase tracking-[0.16em] text-white/40">
+          analyzing
+        </div>
+      )}
+    </div>
+  );
+};
 
 const DeckDisplay = ({
   color,
@@ -619,7 +817,7 @@ const MusicLibraryModal = ({
 // --- Main Application ---
 
 export default function App() {
-  const [libraryTracks, setLibraryTracks] = useState<Track[]>(TRACK_LIBRARY);
+  const [libraryTracks, setLibraryTracks] = useState<Track[]>(() => hydrateTracksWithAnalysis(TRACK_LIBRARY, getInitialAnalysisCache()));
   const [trackAId, setTrackAId] = useState(TRACK_LIBRARY[0]?.id ?? '');
   const [trackBId, setTrackBId] = useState(TRACK_LIBRARY[1]?.id ?? TRACK_LIBRARY[0]?.id ?? '');
   const [isPlayingA, setIsPlayingA] = useState(false);
@@ -627,7 +825,7 @@ export default function App() {
   const [audioStateA, setAudioStateA] = useState(defaultDeckAudioState);
   const [audioStateB, setAudioStateB] = useState(defaultDeckAudioState);
   const [libraryDeck, setLibraryDeck] = useState<'A' | 'B' | null>(null);
-  const [waveformLibrary, setWaveformLibrary] = useState<Record<string, typeof defaultWaveformState>>({});
+  const [waveformLibrary, setWaveformLibrary] = useState<Record<string, typeof defaultWaveformState>>(getInitialWaveformLibrary);
   const [crossfader, setCrossfader] = useState(50);
   const [playbackRateA, setPlaybackRateA] = useState(1);
   const [playbackRateB, setPlaybackRateB] = useState(1);
@@ -637,7 +835,7 @@ export default function App() {
   const crossfaderHandleRef = useRef<HTMLDivElement>(null);
   const [isCrossfaderDragging, setIsCrossfaderDragging] = useState(false);
   const [crossfaderMetrics, setCrossfaderMetrics] = useState({ trackWidth: 0, handleWidth: 0 });
-  const analyzedTrackIdsRef = useRef(new Set<string>());
+  const analyzedTrackIdsRef = useRef(new Set(Object.keys(getInitialAnalysisCache())));
   const [searchQuery, setSearchQuery] = useState('');
   const trackA = findTrackById(libraryTracks, trackAId);
   const trackB = findTrackById(libraryTracks, trackBId);
@@ -707,6 +905,8 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    const cachedAnalysis = getInitialAnalysisCache();
+
     const analyzeTrack = async (track: Track) => {
       setWaveformLibrary((prev) => ({
         ...prev,
@@ -718,16 +918,27 @@ export default function App() {
 
       try {
         const analysis = await analyzeTrackWaveform(track.src);
+        const nextEntry = buildTrackAnalysisEntry(track, analysis);
+        const displayPeaks = shapeWaveformForDisplay(analysis.peaks);
 
         setWaveformLibrary((prev) => ({
           ...prev,
           [track.id]: {
             peaks: analysis.peaks,
+            displayPeaks,
             duration: analysis.duration,
             status: 'ready',
           },
         }));
-        setLibraryTracks((prev) => updateTrackInLibrary(prev, track.id, { duration: formatClock(analysis.duration) }));
+        setLibraryTracks((prev) => updateTrackInLibrary(prev, track.id, {
+          duration: formatClock(analysis.duration),
+          bpm: analysis.bpm,
+          key: analysis.key,
+        }));
+        saveTrackAnalysisCache(getBrowserStorage(), {
+          ...loadTrackAnalysisCache(getBrowserStorage()),
+          [track.id]: nextEntry,
+        });
       } catch {
         setWaveformLibrary((prev) => ({
           ...prev,
@@ -741,6 +952,21 @@ export default function App() {
 
     libraryTracks.forEach((track) => {
       if (analyzedTrackIdsRef.current.has(track.id)) {
+        return;
+      }
+
+      if (cachedAnalysis[track.id]) {
+        analyzedTrackIdsRef.current.add(track.id);
+        const peaks = normalizeWaveformPeaks(cachedAnalysis[track.id].peaks, EMPTY_WAVEFORM_PEAKS.length);
+        setWaveformLibrary((prev) => ({
+          ...prev,
+          [track.id]: {
+            peaks,
+            displayPeaks: shapeWaveformForDisplay(peaks),
+            duration: cachedAnalysis[track.id].duration ?? 0,
+            status: 'ready',
+          },
+        }));
         return;
       }
 
@@ -827,6 +1053,36 @@ export default function App() {
       cleanupB();
     };
   }, [trackAId, trackBId]);
+
+  useEffect(() => {
+    let frameId = 0;
+
+    const tick = () => {
+      if (audioRefA.current && !audioRefA.current.paused) {
+        setAudioStateA((prev) => ({
+          ...prev,
+          currentTime: audioRefA.current?.currentTime ?? prev.currentTime,
+          duration: Number.isFinite(audioRefA.current?.duration) ? audioRefA.current.duration : prev.duration,
+        }));
+      }
+
+      if (audioRefB.current && !audioRefB.current.paused) {
+        setAudioStateB((prev) => ({
+          ...prev,
+          currentTime: audioRefB.current?.currentTime ?? prev.currentTime,
+          duration: Number.isFinite(audioRefB.current?.duration) ? audioRefB.current.duration : prev.duration,
+        }));
+      }
+
+      frameId = window.requestAnimationFrame(tick);
+    };
+
+    frameId = window.requestAnimationFrame(tick);
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, []);
 
   useEffect(() => {
     const gains = getDeckMixGains({ crossfader, levelA, levelB });
@@ -976,6 +1232,32 @@ export default function App() {
   const progressB = getWaveformProgress(audioStateB.currentTime, audioStateB.duration || waveformLibrary[trackB?.id ?? '']?.duration || 0);
   const waveformA = trackA ? (waveformLibrary[trackA.id] ?? defaultWaveformState) : defaultWaveformState;
   const waveformB = trackB ? (waveformLibrary[trackB.id] ?? defaultWaveformState) : defaultWaveformState;
+  const overviewPeaksA = getDisplayedWaveformPeaks(waveformA.displayPeaks, 120);
+  const overviewPeaksB = getDisplayedWaveformPeaks(waveformB.displayPeaks, 120);
+  const beatWindowSizeA = getWaveformBeatWindowSize(
+    waveformA.peaks.length,
+    audioStateA.duration || waveformA.duration,
+    effectiveBpmA,
+    8,
+  );
+  const beatWindowSizeB = getWaveformBeatWindowSize(
+    waveformB.peaks.length,
+    audioStateB.duration || waveformB.duration,
+    effectiveBpmB,
+    8,
+  );
+  const rawBeatWindowFrameA = getPlaybackLineWaveformFrame(
+    waveformA.displayPeaks,
+    progressA,
+    beatWindowSizeA,
+  );
+  const rawBeatWindowFrameB = getPlaybackLineWaveformFrame(
+    waveformB.displayPeaks,
+    progressB,
+    beatWindowSizeB,
+  );
+  const beatWindowFrameA = rawBeatWindowFrameA;
+  const beatWindowFrameB = rawBeatWindowFrameB;
   const crossfaderHandleLeft = getCrossfaderHandleLeft({
     value: crossfader,
     trackWidth: crossfaderMetrics.trackWidth,
@@ -1035,7 +1317,7 @@ export default function App() {
     <div className="h-screen w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans relative">
       
       {/* 1. Header: Song Information & Global Controls - Further shrunk height and updated color */}
-      <header className="h-16 grid grid-cols-[1fr_auto_1fr] bg-[#3C3C3C] shrink-0 z-50 border-b border-white/10">
+      <header className="h-[72px] grid grid-cols-[1fr_auto_1fr] bg-[#3C3C3C] shrink-0 z-50 border-b border-white/10">
         {/* Deck A Section */}
         <div className="flex bg-[#3C3C3C] relative overflow-hidden group border-r border-white/5">
           {/* Artwork - Flush with top and left */}
@@ -1070,9 +1352,9 @@ export default function App() {
             </div>
             
             {/* Waveform Area - Next to artwork */}
-            <div className="flex-1 flex items-end">
-              <div className="w-full h-5 opacity-90">
-                <HorizontalWaveform color={orange} peaks={waveformA.peaks} progress={progressA} isAnalyzing={waveformA.status === 'loading'} />
+            <div className="flex-1 flex items-end pt-1">
+              <div className="w-full h-7 opacity-95">
+                <HorizontalWaveform peaks={overviewPeaksA} progress={progressA} isAnalyzing={waveformA.status === 'loading'} />
               </div>
             </div>
           </div>
@@ -1125,16 +1407,16 @@ export default function App() {
             </div>
             
             {/* Waveform Area - Next to artwork */}
-            <div className="flex-1 flex items-end">
-              <div className="w-full h-5 opacity-90">
-                <HorizontalWaveform color={blue} peaks={waveformB.peaks} progress={progressB} isAnalyzing={waveformB.status === 'loading'} />
+            <div className="flex-1 flex items-end pt-1">
+              <div className="w-full h-7 opacity-95">
+                <HorizontalWaveform peaks={overviewPeaksB} progress={progressB} isAnalyzing={waveformB.status === 'loading'} />
               </div>
             </div>
           </div>
         </div>
       </header>
       {/* 2 & 3. Middle & Bottom Sections: Unified Grid with Spanning Waveforms */}
-      <div className="flex-1 grid grid-cols-[100px_1fr_160px_1fr_100px] grid-rows-2 gap-0 overflow-hidden">
+      <div className="flex-1 grid grid-cols-[98px_1fr_312px_1fr_98px] grid-rows-[minmax(0,1fr)_320px] gap-0 overflow-hidden">
         
         {/* Row 1: Side Panels, Deck Displays */}
         {/* Left Side Panel */}
@@ -1222,11 +1504,11 @@ export default function App() {
         </div>
 
         {/* Central Vertical Waveforms & VU Meters - Spanning 2 rows */}
-        <div className="row-span-2 opz-panel flex overflow-hidden relative p-1 gap-1 min-w-0 border-x border-black/5">
-          <VerticalWaveform color={orange} bpm={effectiveBpmA} peaks={waveformA.peaks} progress={progressA} isAnalyzing={waveformA.status === 'loading'} />
+        <div className="row-span-2 opz-panel flex overflow-hidden relative px-2 py-1 gap-2.5 min-w-0 border-x border-black/5">
+          <VerticalWaveform peaks={beatWindowFrameA.peaks} offset={beatWindowFrameA.offset} isAnalyzing={waveformA.status === 'loading'} />
           <VUMeter color={orange} active={isPlayingA} />
           <VUMeter color={blue} active={isPlayingB} />
-          <VerticalWaveform color={blue} bpm={effectiveBpmB} peaks={waveformB.peaks} progress={progressB} isAnalyzing={waveformB.status === 'loading'} />
+          <VerticalWaveform peaks={beatWindowFrameB.peaks} offset={beatWindowFrameB.offset} isAnalyzing={waveformB.status === 'loading'} />
         </div>
 
         {/* Deck Display B */}
@@ -1315,14 +1597,16 @@ export default function App() {
 
         {/* Row 2: Pitch, Hot Cues */}
         {/* Pitch A with Integrated Sync */}
-        <div className="opz-panel p-2 flex flex-col items-center gap-1.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#ADADAD' }}>
-          <button onClick={() => syncDeckToOther('A')} className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-a shrink-0">Sync</button>
+        <div className="opz-panel p-3 flex flex-col items-center justify-between gap-2 min-w-0 border-r border-black/5" style={{ backgroundColor: '#ADADAD' }}>
+          <div className="w-full max-w-[86px] flex flex-col items-center gap-2">
+          <button onClick={() => syncDeckToOther('A')} className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-a shrink-0 tracking-[0.14em]">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <div className="text-[14px] font-mono font-bold text-black/80">{effectiveBpmA.toFixed(1)}</div>
-            <div className="text-[9px] font-mono font-semibold text-black/35">{pitchPercentA.toFixed(1)}%</div>
+            <div className="text-[16px] font-mono font-bold text-black/80">{effectiveBpmA.toFixed(1)}</div>
+            <div className="text-[10px] font-mono font-semibold text-black/35">{pitchPercentA.toFixed(1)}%</div>
           </div>
-          <div className="flex-1 flex items-center min-h-0 py-2">
-            <VerticalFader value={pitchA} color={orange} height="h-40" handleSize="sm" handleOrientation="horizontal" onChange={setPitchA} />
+          </div>
+          <div className="flex-1 flex items-center min-h-0 py-4">
+            <VerticalFader value={pitchA} color={orange} height="h-56" handleSize="sm" handleOrientation="horizontal" onChange={setPitchA} />
           </div>
         </div>
 
@@ -1625,14 +1909,16 @@ export default function App() {
         </div>
 
         {/* Pitch B with Integrated Sync */}
-        <div className="opz-panel p-2 flex flex-col items-center gap-1.5 min-w-0 border-l border-black/5" style={{ backgroundColor: '#ADADAD' }}>
-          <button onClick={() => syncDeckToOther('B')} className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-b shrink-0">Sync</button>
+        <div className="opz-panel p-3 flex flex-col items-center justify-between gap-2 min-w-0 border-l border-black/5" style={{ backgroundColor: '#ADADAD' }}>
+          <div className="w-full max-w-[86px] flex flex-col items-center gap-2">
+          <button onClick={() => syncDeckToOther('B')} className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-b shrink-0 tracking-[0.14em]">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <div className="text-[14px] font-mono font-bold text-black/80">{effectiveBpmB.toFixed(1)}</div>
-            <div className="text-[9px] font-mono font-semibold text-black/35">{pitchPercentB.toFixed(1)}%</div>
+            <div className="text-[16px] font-mono font-bold text-black/80">{effectiveBpmB.toFixed(1)}</div>
+            <div className="text-[10px] font-mono font-semibold text-black/35">{pitchPercentB.toFixed(1)}%</div>
           </div>
-          <div className="flex-1 flex items-center min-h-0 py-2">
-            <VerticalFader value={pitchB} color={blue} height="h-40" handleSize="sm" handleOrientation="horizontal" onChange={setPitchB} />
+          </div>
+          <div className="flex-1 flex items-center min-h-0 py-4">
+            <VerticalFader value={pitchB} color={blue} height="h-56" handleSize="sm" handleOrientation="horizontal" onChange={setPitchB} />
           </div>
         </div>
       </div>
