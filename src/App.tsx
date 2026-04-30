@@ -1416,7 +1416,7 @@ export default function App() {
         </div>
       </header>
       {/* 2 & 3. Middle & Bottom Sections: Unified Grid with Spanning Waveforms */}
-      <div className="flex-1 grid grid-cols-[72px_minmax(0,1fr)_220px_minmax(0,1fr)_72px] md:grid-cols-[80px_minmax(0,1fr)_244px_minmax(0,1fr)_80px] xl:grid-cols-[98px_1fr_312px_1fr_98px] grid-rows-[minmax(0,1fr)_252px] md:grid-rows-[minmax(0,1fr)_276px] xl:grid-rows-[minmax(0,1fr)_320px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:grid-rows-[minmax(0,1fr)_224px] gap-0 overflow-hidden">
+      <div className="flex-1 grid grid-cols-[72px_minmax(0,1fr)_220px_minmax(0,1fr)_72px] md:grid-cols-[80px_minmax(0,1fr)_244px_minmax(0,1fr)_80px] xl:grid-cols-[98px_1fr_312px_1fr_98px] grid-rows-[minmax(0,1fr)_252px] md:grid-rows-[minmax(0,1fr)_276px] xl:grid-rows-[minmax(0,1fr)_320px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:grid-rows-[minmax(0,1fr)_212px] gap-0 overflow-hidden">
         
         {/* Row 1: Side Panels, Deck Displays */}
         {/* Left Side Panel */}
@@ -1924,7 +1924,7 @@ export default function App() {
       </div>
 
     {/* 4. Footer: Transport Controls & Crossfader - Updated button styles and shortened range */}
-    <footer className="h-20 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[calc(92px+env(safe-area-inset-bottom))] grid grid-cols-[auto_1fr_auto] gap-0 items-center [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:items-start px-6 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-4 pt-0 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:pt-3 pb-[calc(env(safe-area-inset-bottom)+6px)] shrink-0 bg-[#3C3C3C] border-t border-white/10 shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
+    <footer className="h-20 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[calc(104px+env(safe-area-inset-bottom))] grid grid-cols-[auto_1fr_auto] gap-0 items-center [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:items-start px-6 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-4 pt-0 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:pt-4 pb-[calc(env(safe-area-inset-bottom)+8px)] shrink-0 bg-[#3C3C3C] border-t border-white/10 shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
         {/* Left Controls */}
         <div className="flex items-center gap-3 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
           <button 
