@@ -646,15 +646,15 @@ const DeckDisplay = ({
   title: string,
   artist: string,
 }) => {
-  const orbitSize = 214;
-  const orbitDotSize = 18;
+  const orbitSize = 'clamp(172px, 21vw, 214px)';
+  const orbitDotSize = 'clamp(14px, 1.8vw, 18px)';
   const orbitStartAngle = 45;
   const progressDashOffset = 304.7 * (1 - progress);
 
   return (
     <div className="flex flex-col items-center justify-center gap-1 w-full h-full relative p-1 min-w-0">
       {/* Circular Data Meter - Enlarged by another 20% while keeping container height fixed */}
-      <div className="relative w-[185px] h-[185px] rounded-full neu-convex border-[6px] border-[#D1D1D1] flex flex-col items-center justify-center shadow-xl overflow-visible shrink-0">
+      <div className="relative w-[150px] h-[150px] md:w-[165px] md:h-[165px] xl:w-[185px] xl:h-[185px] rounded-full neu-convex border-[5px] xl:border-[6px] border-[#D1D1D1] flex flex-col items-center justify-center shadow-xl overflow-visible shrink-0">
       {/* Outer Orbit Track & Moving Dot */}
       <div
         className="absolute pointer-events-none left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -686,23 +686,23 @@ const DeckDisplay = ({
       <div className="absolute inset-0 rounded-full shadow-[inset_0_0_10px_rgba(0,0,0,0.15)] pointer-events-none" />
       
       {/* Main BPM Display */}
-      <div className="text-[35px] font-mono font-bold leading-none tracking-tighter text-black/80">{bpm.toFixed(1)}</div>
+      <div className="text-[28px] md:text-[32px] xl:text-[35px] font-mono font-bold leading-none tracking-tighter text-black/80">{bpm.toFixed(1)}</div>
       
       {/* Bottom Info Row (BPM Label, Pitch, Range) */}
-      <div className="relative w-full flex items-center justify-center px-6 mb-2">
-        <div className="absolute left-3 text-[12px] font-mono font-bold text-black/50">+0.0%</div>
-        <div className="text-[12px] font-bold uppercase tracking-[0.1em] text-black/40">BPM</div>
-        <div className="absolute right-3 flex items-center gap-0.5 px-1 rounded bg-black/5 border border-black/10">
+      <div className="relative w-full flex items-center justify-center px-4 md:px-5 xl:px-6 mb-1 xl:mb-2">
+        <div className="absolute left-2 md:left-3 text-[10px] md:text-[11px] xl:text-[12px] font-mono font-bold text-black/50">+0.0%</div>
+        <div className="text-[11px] md:text-[12px] xl:text-[12px] font-bold uppercase tracking-[0.1em] text-black/40">BPM</div>
+        <div className="absolute right-2 md:right-3 flex items-center gap-0.5 px-1 rounded bg-black/5 border border-black/10">
           <span className="text-[7px] font-bold text-black/40">±</span>
-          <span className="text-[12px] font-mono font-bold text-black/60">8</span>
+          <span className="text-[10px] md:text-[11px] xl:text-[12px] font-mono font-bold text-black/60">8</span>
         </div>
       </div>
       
       {/* Time Display */}
-      <div className="flex flex-col items-center w-28 mt-2">
+      <div className="flex flex-col items-center w-24 md:w-28 mt-1 md:mt-2">
         <div className="w-full h-[3px] rounded-full mb-2" style={{ backgroundColor: color }} />
-        <div className="text-[17px] font-mono font-bold text-black/90 tracking-tight">{time}</div>
-        <div className="text-[13px] font-mono font-bold text-black/50 leading-none">{duration}</div>
+        <div className="text-[15px] md:text-[16px] xl:text-[17px] font-mono font-bold text-black/90 tracking-tight">{time}</div>
+        <div className="text-[11px] md:text-[12px] xl:text-[13px] font-mono font-bold text-black/50 leading-none">{duration}</div>
       </div>
 
       {/* Progress Ring */}
@@ -1416,19 +1416,19 @@ export default function App() {
         </div>
       </header>
       {/* 2 & 3. Middle & Bottom Sections: Unified Grid with Spanning Waveforms */}
-      <div className="flex-1 grid grid-cols-[98px_1fr_312px_1fr_98px] grid-rows-[minmax(0,1fr)_320px] gap-0 overflow-hidden">
+      <div className="flex-1 grid grid-cols-[72px_minmax(0,1fr)_220px_minmax(0,1fr)_72px] md:grid-cols-[80px_minmax(0,1fr)_244px_minmax(0,1fr)_80px] xl:grid-cols-[98px_1fr_312px_1fr_98px] grid-rows-[minmax(0,1fr)_252px] md:grid-rows-[minmax(0,1fr)_276px] xl:grid-rows-[minmax(0,1fr)_320px] gap-0 overflow-hidden">
         
         {/* Row 1: Side Panels, Deck Displays */}
         {/* Left Side Panel */}
-        <div className="p-2 flex flex-col min-w-0 border-r border-black/5 border-b border-black/10 relative shadow-[inset_1px_1px_2px_rgba(0,0,0,0.1)] overflow-hidden" style={{ backgroundColor: '#ADADAD' }}>
+        <div className="p-1.5 md:p-2 flex flex-col min-w-0 border-r border-black/5 border-b border-black/10 relative shadow-[inset_1px_1px_2px_rgba(0,0,0,0.1)] overflow-hidden" style={{ backgroundColor: '#ADADAD' }}>
           {/* Mode Selector Header - Unified 2-Tier Layout */}
-          <div className="flex flex-col border-b border-black/20 -mx-2 -mt-2 mb-1 bg-[#D0D0D0] overflow-hidden shrink-0">
+          <div className="flex flex-col border-b border-black/20 -mx-1.5 md:-mx-2 -mt-1.5 md:-mt-2 mb-1 bg-[#D0D0D0] overflow-hidden shrink-0">
             {/* Top Tier: Title (Fixed Height) */}
-            <div className="h-7 flex items-center justify-center border-b border-black/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.5)]">
-              <div className="text-[11px] font-bold uppercase tracking-widest text-black/80 whitespace-nowrap">{modeA}</div>
+            <div className="h-6 md:h-7 flex items-center justify-center border-b border-black/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.5)]">
+              <div className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.14em] md:tracking-widest text-black/80 whitespace-nowrap">{modeA}</div>
             </div>
             {/* Bottom Tier: Navigation Buttons (Fixed Height) */}
-            <div className="h-7 flex">
+            <div className="h-6 md:h-7 flex">
               <button 
                 onClick={() => setModeA(cycleMode(modeA, -1))}
                 className="flex-1 flex items-center justify-center bg-[#D0D0D0] hover:bg-[#D8D8D8] border-r border-black/10 active:shadow-inner transition-all"
@@ -1444,7 +1444,7 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex-1 flex flex-col justify-center gap-0.5 py-0 min-h-0">
+          <div className="flex-1 flex flex-col justify-center gap-0 py-0 min-h-0 scale-[0.84] md:scale-[0.92] xl:scale-100 origin-center">
             {modeA === 'Mixer' && (
               <>
                 <Knob 
@@ -1504,7 +1504,7 @@ export default function App() {
         </div>
 
         {/* Central Vertical Waveforms & VU Meters - Spanning 2 rows */}
-        <div className="row-span-2 opz-panel flex overflow-hidden relative px-2 py-1 gap-2.5 min-w-0 border-x border-black/5">
+        <div className="row-span-2 opz-panel flex overflow-hidden relative px-1.5 md:px-2 py-1 gap-1.5 md:gap-2.5 min-w-0 border-x border-black/5">
           <VerticalWaveform peaks={beatWindowFrameA.peaks} offset={beatWindowFrameA.offset} isAnalyzing={waveformA.status === 'loading'} />
           <VUMeter color={orange} active={isPlayingA} />
           <VUMeter color={blue} active={isPlayingB} />
@@ -1526,15 +1526,15 @@ export default function App() {
         </div>
 
         {/* Right Side Panel */}
-        <div className="p-2 flex flex-col min-w-0 border-l border-black/5 border-b border-black/10 relative shadow-[inset_1px_1px_2px_rgba(0,0,0,0.1)] overflow-hidden" style={{ backgroundColor: '#ADADAD' }}>
+        <div className="p-1.5 md:p-2 flex flex-col min-w-0 border-l border-black/5 border-b border-black/10 relative shadow-[inset_1px_1px_2px_rgba(0,0,0,0.1)] overflow-hidden" style={{ backgroundColor: '#ADADAD' }}>
           {/* Mode Selector Header - Unified 2-Tier Layout */}
-          <div className="flex flex-col border-b border-black/20 -mx-2 -mt-2 mb-1 bg-[#D0D0D0] overflow-hidden shrink-0">
+          <div className="flex flex-col border-b border-black/20 -mx-1.5 md:-mx-2 -mt-1.5 md:-mt-2 mb-1 bg-[#D0D0D0] overflow-hidden shrink-0">
             {/* Top Tier: Title (Fixed Height) */}
-            <div className="h-7 flex items-center justify-center border-b border-black/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.5)]">
-              <div className="text-[11px] font-bold uppercase tracking-widest text-black/80 whitespace-nowrap">{modeB}</div>
+            <div className="h-6 md:h-7 flex items-center justify-center border-b border-black/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.5)]">
+              <div className="text-[10px] md:text-[11px] font-bold uppercase tracking-[0.14em] md:tracking-widest text-black/80 whitespace-nowrap">{modeB}</div>
             </div>
             {/* Bottom Tier: Navigation Buttons (Fixed Height) */}
-            <div className="h-7 flex">
+            <div className="h-6 md:h-7 flex">
               <button 
                 onClick={() => setModeB(cycleMode(modeB, -1))}
                 className="flex-1 flex items-center justify-center bg-[#D0D0D0] hover:bg-[#D8D8D8] border-r border-black/10 active:shadow-inner transition-all"
@@ -1550,7 +1550,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col justify-center gap-0.5 py-0 min-h-0">
+          <div className="flex-1 flex flex-col justify-center gap-0 py-0 min-h-0 scale-[0.84] md:scale-[0.92] xl:scale-100 origin-center">
             {modeB === 'Mixer' && (
               <>
                 <Knob 
@@ -1597,47 +1597,47 @@ export default function App() {
 
         {/* Row 2: Pitch, Hot Cues */}
         {/* Pitch A with Integrated Sync */}
-        <div className="opz-panel p-3 flex flex-col items-center justify-between gap-2 min-w-0 border-r border-black/5" style={{ backgroundColor: '#ADADAD' }}>
-          <div className="w-full max-w-[86px] flex flex-col items-center gap-2">
-          <button onClick={() => syncDeckToOther('A')} className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-a shrink-0 tracking-[0.14em]">Sync</button>
+        <div className="opz-panel p-2 md:p-2.5 xl:p-3 flex flex-col items-center justify-between gap-1.5 md:gap-2 min-w-0 border-r border-black/5" style={{ backgroundColor: '#ADADAD' }}>
+          <div className="w-full max-w-[72px] md:max-w-[78px] xl:max-w-[86px] flex flex-col items-center gap-1.5 md:gap-2">
+          <button onClick={() => syncDeckToOther('A')} className="w-full py-1 md:py-1.5 rounded-xl neu-button text-[10px] xl:text-[11px] font-bold uppercase text-deck-a shrink-0 tracking-[0.14em]">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <div className="text-[16px] font-mono font-bold text-black/80">{effectiveBpmA.toFixed(1)}</div>
-            <div className="text-[10px] font-mono font-semibold text-black/35">{pitchPercentA.toFixed(1)}%</div>
+            <div className="text-[14px] md:text-[15px] xl:text-[16px] font-mono font-bold text-black/80">{effectiveBpmA.toFixed(1)}</div>
+            <div className="text-[9px] md:text-[9.5px] xl:text-[10px] font-mono font-semibold text-black/35">{pitchPercentA.toFixed(1)}%</div>
           </div>
           </div>
-          <div className="flex-1 flex items-center min-h-0 py-4">
-            <VerticalFader value={pitchA} color={orange} height="h-56" handleSize="sm" handleOrientation="horizontal" onChange={setPitchA} />
+          <div className="flex-1 flex items-center min-h-0 py-2 md:py-3 xl:py-4">
+            <VerticalFader value={pitchA} color={orange} height="h-44 md:h-48 xl:h-56" handleSize="sm" handleOrientation="horizontal" onChange={setPitchA} />
           </div>
         </div>
 
         {/* Named Hot Cues A */}
-        <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
-          <div className="flex justify-between items-center shrink-0 gap-2">
-            <div className="grid grid-cols-3 gap-2.5 text-[11px] font-bold uppercase tracking-[0.16em] flex-1 max-w-[320px]">
+        <div className="opz-panel p-1.5 md:p-2 flex flex-col gap-1 md:gap-1.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
+          <div className="flex justify-between items-center shrink-0 gap-1.5 md:gap-2">
+            <div className="grid grid-cols-3 gap-1.5 md:gap-2.5 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.14em] md:tracking-[0.16em] flex-1 max-w-[280px] xl:max-w-[320px]">
               <button
                 onClick={() => setPadModeA('hotCue')}
-                className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeA === 'hotCue' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
+                className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeA === 'hotCue' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
                 style={padModeA === 'hotCue' ? { textShadow: '0 0 8px rgba(255, 148, 87, 0.85), 0 0 14px rgba(255, 148, 87, 0.45)' } : undefined}
               >
                 Hot Cue
               </button>
               <button
                 onClick={() => setPadModeA('padFx')}
-                className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeA === 'padFx' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
+                className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeA === 'padFx' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
                 style={padModeA === 'padFx' ? { textShadow: '0 0 8px rgba(255, 148, 87, 0.85), 0 0 14px rgba(255, 148, 87, 0.45)' } : undefined}
               >
                 Pad FX
               </button>
               <button
                 onClick={() => setPadModeA('sample')}
-                className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeA === 'sample' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
+                className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeA === 'sample' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
                 style={padModeA === 'sample' ? { textShadow: '0 0 8px rgba(255, 148, 87, 0.85), 0 0 14px rgba(255, 148, 87, 0.45)' } : undefined}
               >
                 Sample
               </button>
             </div>
             <div className="shrink-0 flex items-center gap-1">
-              <button className="flex items-center gap-1.5 px-2 py-1 rounded-lg neu-button text-[10px] font-bold uppercase tracking-[0.14em] text-black/65">
+              <button className="flex items-center gap-1 md:gap-1.5 px-1.5 md:px-2 py-1 rounded-lg neu-button text-[9px] md:text-[10px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] text-black/65">
                 <Pencil size={11} strokeWidth={2.2} />
                 <span>Edit</span>
               </button>
@@ -1647,7 +1647,7 @@ export default function App() {
                     <button
                       key={bank}
                       onClick={() => setHotCueBankA(bank)}
-                      className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-[0.14em] transition-colors ${hotCueBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                      className={`px-1.5 md:px-2 py-1 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${hotCueBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
                     </button>
@@ -1660,7 +1660,7 @@ export default function App() {
                     <button
                       key={bank}
                       onClick={() => setPadFxBankA(bank)}
-                      className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-[0.14em] transition-colors ${padFxBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                      className={`px-1.5 md:px-2 py-1 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${padFxBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
                     </button>
@@ -1673,7 +1673,7 @@ export default function App() {
                     <button
                       key={bank}
                       onClick={() => setSampleBankA(bank)}
-                      className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-[0.14em] transition-colors ${sampleBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                      className={`px-1.5 md:px-2 py-1 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${sampleBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
                     </button>
@@ -1683,7 +1683,7 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex-1 grid grid-cols-4 gap-1 min-h-0">
+          <div className="flex-1 grid grid-cols-4 gap-0.5 md:gap-1 min-h-0">
             {padModeA === 'hotCue' && hotCuesA.map((cue, i) => (
               <button
                 key={i}
@@ -1761,33 +1761,33 @@ export default function App() {
         {/* Central Column is spanned by the row-span-2 div above */}
 
         {/* Named Hot Cues B */}
-        <div className="opz-panel p-2 flex flex-col gap-1.5 min-w-0 border-l border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
-          <div className="flex justify-between items-center shrink-0 gap-2">
-            <div className="grid grid-cols-3 gap-2.5 text-[11px] font-bold uppercase tracking-[0.16em] flex-1 max-w-[320px]">
+        <div className="opz-panel p-1.5 md:p-2 flex flex-col gap-1 md:gap-1.5 min-w-0 border-l border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
+          <div className="flex justify-between items-center shrink-0 gap-1.5 md:gap-2">
+            <div className="grid grid-cols-3 gap-1.5 md:gap-2.5 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.14em] md:tracking-[0.16em] flex-1 max-w-[280px] xl:max-w-[320px]">
               <button
                 onClick={() => setPadModeB('hotCue')}
-                className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeB === 'hotCue' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
+                className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeB === 'hotCue' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
                 style={padModeB === 'hotCue' ? { textShadow: '0 0 8px rgba(46, 141, 255, 0.9), 0 0 14px rgba(46, 141, 255, 0.5)' } : undefined}
               >
                 Hot Cue
               </button>
               <button
                 onClick={() => setPadModeB('padFx')}
-                className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeB === 'padFx' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
+                className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeB === 'padFx' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
                 style={padModeB === 'padFx' ? { textShadow: '0 0 8px rgba(46, 141, 255, 0.9), 0 0 14px rgba(46, 141, 255, 0.5)' } : undefined}
               >
                 Pad FX
               </button>
               <button
                 onClick={() => setPadModeB('sample')}
-                className={`min-w-0 rounded-lg px-2 py-1.5 text-center border-b-2 transition-colors ${padModeB === 'sample' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
+                className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeB === 'sample' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
                 style={padModeB === 'sample' ? { textShadow: '0 0 8px rgba(46, 141, 255, 0.9), 0 0 14px rgba(46, 141, 255, 0.5)' } : undefined}
               >
                 Sample
               </button>
             </div>
             <div className="shrink-0 flex items-center gap-1">
-              <button className="flex items-center gap-1.5 px-2 py-1 rounded-lg neu-button text-[10px] font-bold uppercase tracking-[0.14em] text-black/65">
+              <button className="flex items-center gap-1 md:gap-1.5 px-1.5 md:px-2 py-1 rounded-lg neu-button text-[9px] md:text-[10px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] text-black/65">
                 <Pencil size={11} strokeWidth={2.2} />
                 <span>Edit</span>
               </button>
@@ -1797,7 +1797,7 @@ export default function App() {
                     <button
                       key={bank}
                       onClick={() => setHotCueBankB(bank)}
-                      className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-[0.14em] transition-colors ${hotCueBankB === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                      className={`px-1.5 md:px-2 py-1 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${hotCueBankB === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
                     </button>
@@ -1810,7 +1810,7 @@ export default function App() {
                     <button
                       key={bank}
                       onClick={() => setPadFxBankB(bank)}
-                      className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-[0.14em] transition-colors ${padFxBankB === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                      className={`px-1.5 md:px-2 py-1 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${padFxBankB === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
                     </button>
@@ -1823,7 +1823,7 @@ export default function App() {
                     <button
                       key={bank}
                       onClick={() => setSampleBankB(bank)}
-                      className={`px-2 py-1 rounded-lg text-[9px] font-bold uppercase tracking-[0.14em] transition-colors ${sampleBankB === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                      className={`px-1.5 md:px-2 py-1 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${sampleBankB === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
                     </button>
@@ -1833,7 +1833,7 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex-1 grid grid-cols-4 gap-1 min-h-0">
+          <div className="flex-1 grid grid-cols-4 gap-0.5 md:gap-1 min-h-0">
             {padModeB === 'hotCue' && hotCuesB.map((cue, i) => (
               <button
                 key={i}
@@ -1909,16 +1909,16 @@ export default function App() {
         </div>
 
         {/* Pitch B with Integrated Sync */}
-        <div className="opz-panel p-3 flex flex-col items-center justify-between gap-2 min-w-0 border-l border-black/5" style={{ backgroundColor: '#ADADAD' }}>
-          <div className="w-full max-w-[86px] flex flex-col items-center gap-2">
-          <button onClick={() => syncDeckToOther('B')} className="w-full py-1.5 rounded-xl neu-button text-[11px] font-bold uppercase text-deck-b shrink-0 tracking-[0.14em]">Sync</button>
+        <div className="opz-panel p-2 md:p-2.5 xl:p-3 flex flex-col items-center justify-between gap-1.5 md:gap-2 min-w-0 border-l border-black/5" style={{ backgroundColor: '#ADADAD' }}>
+          <div className="w-full max-w-[72px] md:max-w-[78px] xl:max-w-[86px] flex flex-col items-center gap-1.5 md:gap-2">
+          <button onClick={() => syncDeckToOther('B')} className="w-full py-1 md:py-1.5 rounded-xl neu-button text-[10px] xl:text-[11px] font-bold uppercase text-deck-b shrink-0 tracking-[0.14em]">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <div className="text-[16px] font-mono font-bold text-black/80">{effectiveBpmB.toFixed(1)}</div>
-            <div className="text-[10px] font-mono font-semibold text-black/35">{pitchPercentB.toFixed(1)}%</div>
+            <div className="text-[14px] md:text-[15px] xl:text-[16px] font-mono font-bold text-black/80">{effectiveBpmB.toFixed(1)}</div>
+            <div className="text-[9px] md:text-[9.5px] xl:text-[10px] font-mono font-semibold text-black/35">{pitchPercentB.toFixed(1)}%</div>
           </div>
           </div>
-          <div className="flex-1 flex items-center min-h-0 py-4">
-            <VerticalFader value={pitchB} color={blue} height="h-56" handleSize="sm" handleOrientation="horizontal" onChange={setPitchB} />
+          <div className="flex-1 flex items-center min-h-0 py-2 md:py-3 xl:py-4">
+            <VerticalFader value={pitchB} color={blue} height="h-44 md:h-48 xl:h-56" handleSize="sm" handleOrientation="horizontal" onChange={setPitchB} />
           </div>
         </div>
       </div>
