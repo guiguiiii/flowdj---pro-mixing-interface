@@ -1510,23 +1510,22 @@ export default function App() {
                   value={levelControlA.value} color={orange} height="h-40" handleSize="sm" handleOrientation="horizontal"
                   onChange={levelControlA.onChange} 
                 />
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-col items-center gap-1.5">
                   <button
                     onClick={() => setLevelTargetA((prev) => (prev === 'cues' ? 'master' : 'cues'))}
                     className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetA === 'cues' ? 'text-white' : 'text-black/45 bg-white/20'}`}
                     style={levelTargetA === 'cues' ? { backgroundColor: orange, boxShadow: `0 0 12px ${orange}88` } : undefined}
                   >
-                    Cues
+                    Cue
                   </button>
                   <button
                     onClick={() => setLevelTargetA((prev) => (prev === 'pads' ? 'master' : 'pads'))}
                     className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetA === 'pads' ? 'text-white' : 'text-black/45 bg-white/20'}`}
                     style={levelTargetA === 'pads' ? { backgroundColor: orange, boxShadow: `0 0 12px ${orange}88` } : undefined}
                   >
-                    Pads
+                    Pad
                   </button>
                 </div>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-black/70">Level</span>
               </div>
             )}
           </div>
@@ -1632,23 +1631,22 @@ export default function App() {
                   value={levelControlB.value} color={blue} height="h-40" handleSize="sm" handleOrientation="horizontal"
                   onChange={levelControlB.onChange} 
                 />
-                <div className="flex items-center gap-1.5">
+                <div className="flex flex-col items-center gap-1.5">
                   <button
                     onClick={() => setLevelTargetB((prev) => (prev === 'cues' ? 'master' : 'cues'))}
                     className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetB === 'cues' ? 'text-white' : 'text-black/45 bg-white/20'}`}
                     style={levelTargetB === 'cues' ? { backgroundColor: blue, boxShadow: `0 0 12px ${blue}88` } : undefined}
                   >
-                    Cues
+                    Cue
                   </button>
                   <button
                     onClick={() => setLevelTargetB((prev) => (prev === 'pads' ? 'master' : 'pads'))}
                     className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetB === 'pads' ? 'text-white' : 'text-black/45 bg-white/20'}`}
                     style={levelTargetB === 'pads' ? { backgroundColor: blue, boxShadow: `0 0 12px ${blue}88` } : undefined}
                   >
-                    Pads
+                    Pad
                   </button>
                 </div>
-                <span className="text-[9px] font-bold uppercase tracking-widest text-black/70">Level</span>
               </div>
             )}
           </div>
