@@ -842,7 +842,7 @@ export default function App() {
   
   const [modeA, setModeA] = useState('Mixer');
   const [modeB, setModeB] = useState('Mixer');
-  const panelModes = ['FX', 'Mixer', 'Pads level'];
+  const panelModes = ['FX', 'Mixer', 'Level'];
 
   // Mixer & FX States
   const [mixerA, setMixerA] = useState({ hi: 50, mid: 50, low: 50 });
@@ -851,6 +851,12 @@ export default function App() {
   const [fxB, setFxB] = useState({ filter: 50, echo: 40, reverb: 20 });
   const [levelA, setLevelA] = useState(80);
   const [levelB, setLevelB] = useState(80);
+  const [cueLevelA, setCueLevelA] = useState(80);
+  const [cueLevelB, setCueLevelB] = useState(80);
+  const [padsLevelA, setPadsLevelA] = useState(80);
+  const [padsLevelB, setPadsLevelB] = useState(80);
+  const [levelTargetA, setLevelTargetA] = useState<'master' | 'cues' | 'pads'>('master');
+  const [levelTargetB, setLevelTargetB] = useState<'master' | 'cues' | 'pads'>('master');
   const [pitchA, setPitchA] = useState(50);
   const [pitchB, setPitchB] = useState(50);
   const [selectedHotCueA, setSelectedHotCueA] = useState(0);
@@ -873,6 +879,29 @@ export default function App() {
     const nextIdx = (idx + direction + panelModes.length) % panelModes.length;
     return panelModes[nextIdx];
   };
+
+  const getLevelControl = (
+    target: 'master' | 'cues' | 'pads',
+    masterValue: number,
+    cuesValue: number,
+    padsValue: number,
+    setMasterValue: React.Dispatch<React.SetStateAction<number>>,
+    setCuesValue: React.Dispatch<React.SetStateAction<number>>,
+    setPadsValue: React.Dispatch<React.SetStateAction<number>>,
+  ) => {
+    if (target === 'cues') {
+      return { value: cuesValue, onChange: setCuesValue };
+    }
+
+    if (target === 'pads') {
+      return { value: padsValue, onChange: setPadsValue };
+    }
+
+    return { value: masterValue, onChange: setMasterValue };
+  };
+
+  const levelControlA = getLevelControl(levelTargetA, levelA, cueLevelA, padsLevelA, setLevelA, setCueLevelA, setPadsLevelA);
+  const levelControlB = getLevelControl(levelTargetB, levelB, cueLevelB, padsLevelB, setLevelB, setCueLevelB, setPadsLevelB);
 
   useEffect(() => {
     const updateCrossfaderMetrics = () => {
@@ -1164,10 +1193,8 @@ export default function App() {
   const syncDeckToOther = (targetDeck: 'A' | 'B') => {
     const sourceTrack = targetDeck === 'A' ? trackB : trackA;
     const targetTrack = targetDeck === 'A' ? trackA : trackB;
-    const sourceIsPlaying = targetDeck === 'A' ? isPlayingB : isPlayingA;
-    const sourceBpm = (targetDeck === 'A' ? effectiveBpmB : effectiveBpmA);
+    const sourceBpm = targetDeck === 'A' ? effectiveBpmB : effectiveBpmA;
     const nextPlaybackRate = getSyncedPlaybackRate({
-      sourceIsPlaying,
       sourceBpm,
       targetBaseBpm: targetTrack?.bpm ?? 0,
     });
@@ -1477,12 +1504,28 @@ export default function App() {
                 />
               </>
             )}
-            {modeA === 'Pads level' && (
+            {modeA === 'Level' && (
               <div className="flex-1 flex flex-col items-center justify-center gap-2">
                 <VerticalFader 
-                  value={levelA} color={orange} height="h-40" handleSize="sm" handleOrientation="horizontal"
-                  onChange={setLevelA} 
+                  value={levelControlA.value} color={orange} height="h-40" handleSize="sm" handleOrientation="horizontal"
+                  onChange={levelControlA.onChange} 
                 />
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setLevelTargetA((prev) => (prev === 'cues' ? 'master' : 'cues'))}
+                    className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetA === 'cues' ? 'text-white' : 'text-black/45 bg-white/20'}`}
+                    style={levelTargetA === 'cues' ? { backgroundColor: orange, boxShadow: `0 0 12px ${orange}88` } : undefined}
+                  >
+                    Cues
+                  </button>
+                  <button
+                    onClick={() => setLevelTargetA((prev) => (prev === 'pads' ? 'master' : 'pads'))}
+                    className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetA === 'pads' ? 'text-white' : 'text-black/45 bg-white/20'}`}
+                    style={levelTargetA === 'pads' ? { backgroundColor: orange, boxShadow: `0 0 12px ${orange}88` } : undefined}
+                  >
+                    Pads
+                  </button>
+                </div>
                 <span className="text-[9px] font-bold uppercase tracking-widest text-black/70">Level</span>
               </div>
             )}
@@ -1583,12 +1626,28 @@ export default function App() {
                 />
               </>
             )}
-            {modeB === 'Pads level' && (
+            {modeB === 'Level' && (
               <div className="flex-1 flex flex-col items-center justify-center gap-2">
                 <VerticalFader 
-                  value={levelB} color={blue} height="h-40" handleSize="sm" handleOrientation="horizontal"
-                  onChange={setLevelB} 
+                  value={levelControlB.value} color={blue} height="h-40" handleSize="sm" handleOrientation="horizontal"
+                  onChange={levelControlB.onChange} 
                 />
+                <div className="flex items-center gap-1.5">
+                  <button
+                    onClick={() => setLevelTargetB((prev) => (prev === 'cues' ? 'master' : 'cues'))}
+                    className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetB === 'cues' ? 'text-white' : 'text-black/45 bg-white/20'}`}
+                    style={levelTargetB === 'cues' ? { backgroundColor: blue, boxShadow: `0 0 12px ${blue}88` } : undefined}
+                  >
+                    Cues
+                  </button>
+                  <button
+                    onClick={() => setLevelTargetB((prev) => (prev === 'pads' ? 'master' : 'pads'))}
+                    className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetB === 'pads' ? 'text-white' : 'text-black/45 bg-white/20'}`}
+                    style={levelTargetB === 'pads' ? { backgroundColor: blue, boxShadow: `0 0 12px ${blue}88` } : undefined}
+                  >
+                    Pads
+                  </button>
+                </div>
                 <span className="text-[9px] font-bold uppercase tracking-widest text-black/70">Level</span>
               </div>
             )}
