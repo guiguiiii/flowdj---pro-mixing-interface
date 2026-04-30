@@ -1,0 +1,369 @@
+<svg width="1440" height="900" viewBox="0 0 1440 900" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="panelMetal" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E0E0E0"/>
+      <stop offset="100%" stop-color="#BCBCBC"/>
+    </linearGradient>
+    <linearGradient id="buttonDark" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#4D4D4D"/>
+      <stop offset="100%" stop-color="#242424"/>
+    </linearGradient>
+    <linearGradient id="faderFill" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#F2F2F2"/>
+      <stop offset="55%" stop-color="#D0D0D0"/>
+      <stop offset="100%" stop-color="#B8B8B8"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.25"/>
+    </filter>
+    <filter id="innerGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="0" stdDeviation="8" flood-color="#FFFFFF" flood-opacity="0.22"/>
+    </filter>
+    <style>
+      text { font-family: "SF Pro Display", "Inter", sans-serif; }
+      .mono { font-family: "JetBrains Mono", "Menlo", monospace; }
+      .caps { letter-spacing: 0.18em; text-transform: uppercase; }
+      .tiny { font-size: 8px; font-weight: 700; }
+      .micro { font-size: 6px; font-weight: 700; }
+      .small { font-size: 11px; font-weight: 700; }
+      .label { font-size: 9px; font-weight: 700; letter-spacing: 0.16em; }
+      .body { font-size: 12px; font-weight: 700; }
+      .muted { fill: rgba(0,0,0,0.45); }
+      .muted-light { fill: rgba(255,255,255,0.42); }
+    </style>
+  </defs>
+
+  <rect width="1440" height="900" fill="#333333"/>
+
+  <rect x="0" y="0" width="1440" height="64" fill="#3C3C3C"/>
+  <rect x="0" y="836" width="1440" height="64" fill="#3C3C3C"/>
+  <rect x="0" y="64" width="1440" height="772" fill="#333333"/>
+
+  <g id="header-left">
+    <rect x="0" y="0" width="640" height="64" fill="#3C3C3C"/>
+    <rect x="0" y="0" width="64" height="64" fill="url(#panelMetal)"/>
+    <rect x="2" y="2" width="60" height="60" rx="8" fill="#746E68"/>
+    <circle cx="19" cy="50" r="8" fill="#111111" fill-opacity="0.62"/>
+    <rect x="28" y="16" width="26" height="26" rx="13" fill="#E0E0E0" fill-opacity="0.18"/>
+    <text x="80" y="22" class="small" fill="#FFFFFF">One Love</text>
+    <rect x="150" y="12" width="24" height="14" rx="3" fill="#4CD964"/>
+    <text x="158" y="22" class="tiny" fill="#FFFFFF">4A</text>
+    <text x="574" y="24" class="body mono" fill="#FFFFFF">-01:48</text>
+    <text x="80" y="38" class="tiny caps" fill="#FFFFFF" fill-opacity="0.38">DAVID GUETTA</text>
+    <rect x="80" y="46" width="530" height="10" rx="5" fill="#111111" fill-opacity="0.38"/>
+    <g fill="#FF9457" fill-opacity="0.8">
+      <rect x="88" y="50" width="3" height="4" rx="2"/>
+      <rect x="95" y="48" width="3" height="8" rx="2"/>
+      <rect x="102" y="47" width="3" height="10" rx="2"/>
+      <rect x="109" y="49" width="3" height="6" rx="2"/>
+      <rect x="116" y="46" width="3" height="12" rx="2"/>
+      <rect x="123" y="45" width="3" height="14" rx="2"/>
+      <rect x="130" y="48" width="3" height="8" rx="2"/>
+      <rect x="137" y="47" width="3" height="10" rx="2"/>
+      <rect x="144" y="49" width="3" height="6" rx="2"/>
+      <rect x="151" y="46" width="3" height="12" rx="2"/>
+      <rect x="158" y="44" width="3" height="16" rx="2"/>
+      <rect x="165" y="49" width="3" height="6" rx="2"/>
+      <rect x="172" y="47" width="3" height="10" rx="2"/>
+      <rect x="179" y="45" width="3" height="14" rx="2"/>
+      <rect x="186" y="48" width="3" height="8" rx="2"/>
+    </g>
+  </g>
+
+  <g id="header-center">
+    <rect x="640" y="0" width="160" height="64" fill="#333333"/>
+    <circle cx="720" cy="20" r="12" fill="#D0D0D0" filter="url(#shadow)"/>
+    <circle cx="720" cy="20" r="5" fill="#FF3B30"/>
+    <circle cx="720" cy="44" r="12" fill="#D0D0D0" filter="url(#shadow)"/>
+    <circle cx="720" cy="44" r="4" fill="#3C3C3C"/>
+  </g>
+
+  <g id="header-right">
+    <rect x="800" y="0" width="640" height="64" fill="#3C3C3C"/>
+    <rect x="1376" y="0" width="64" height="64" fill="url(#panelMetal)"/>
+    <rect x="1378" y="2" width="60" height="60" rx="8" fill="#5D6570"/>
+    <circle cx="1421" cy="50" r="8" fill="#111111" fill-opacity="0.62"/>
+    <text x="1266" y="22" class="body mono" fill="#FFFFFF">-03:20</text>
+    <text x="1160" y="22" class="small" fill="#FFFFFF">Teenage Dream</text>
+    <rect x="1131" y="12" width="24" height="14" rx="3" fill="#007AFF"/>
+    <text x="1139" y="22" class="tiny" fill="#FFFFFF">5B</text>
+    <text x="1160" y="38" class="tiny caps" fill="#FFFFFF" fill-opacity="0.38">KATY PERRY</text>
+    <rect x="830" y="46" width="530" height="10" rx="5" fill="#111111" fill-opacity="0.38"/>
+    <g fill="#2E8DFF" fill-opacity="0.8">
+      <rect x="1348" y="50" width="3" height="4" rx="2"/>
+      <rect x="1341" y="48" width="3" height="8" rx="2"/>
+      <rect x="1334" y="47" width="3" height="10" rx="2"/>
+      <rect x="1327" y="49" width="3" height="6" rx="2"/>
+      <rect x="1320" y="46" width="3" height="12" rx="2"/>
+      <rect x="1313" y="45" width="3" height="14" rx="2"/>
+      <rect x="1306" y="48" width="3" height="8" rx="2"/>
+      <rect x="1299" y="47" width="3" height="10" rx="2"/>
+      <rect x="1292" y="49" width="3" height="6" rx="2"/>
+      <rect x="1285" y="46" width="3" height="12" rx="2"/>
+      <rect x="1278" y="44" width="3" height="16" rx="2"/>
+      <rect x="1271" y="49" width="3" height="6" rx="2"/>
+      <rect x="1264" y="47" width="3" height="10" rx="2"/>
+      <rect x="1257" y="45" width="3" height="14" rx="2"/>
+      <rect x="1250" y="48" width="3" height="8" rx="2"/>
+    </g>
+  </g>
+
+  <g id="middle-grid">
+    <rect x="0" y="64" width="100" height="386" fill="#ADADAD"/>
+    <rect x="100" y="64" width="490" height="386" fill="#D0D0D0"/>
+    <rect x="590" y="64" width="260" height="772" fill="#ADADAD"/>
+    <rect x="850" y="64" width="490" height="386" fill="#D0D0D0"/>
+    <rect x="1340" y="64" width="100" height="386" fill="#ADADAD"/>
+    <rect x="0" y="450" width="100" height="386" fill="#ADADAD"/>
+    <rect x="100" y="450" width="490" height="386" fill="#ADADAD"/>
+    <rect x="850" y="450" width="490" height="386" fill="#ADADAD"/>
+    <rect x="1340" y="450" width="100" height="386" fill="#ADADAD"/>
+
+    <g id="left-panel">
+      <rect x="0" y="64" width="100" height="56" fill="#D0D0D0"/>
+      <text x="50" y="88" text-anchor="middle" class="small caps" fill="#1A1A1A">Mixer</text>
+      <path d="M18 104 L28 98 L28 110 Z" fill="#1A1A1A" fill-opacity="0.6"/>
+      <path d="M82 104 L72 98 L72 110 Z" fill="#1A1A1A" fill-opacity="0.6"/>
+      <g transform="translate(15,142)">
+        <circle cx="35" cy="35" r="30" fill="#D0D0D0" filter="url(#shadow)"/>
+        <circle cx="35" cy="35" r="22" fill="none" stroke="#95ED21" stroke-width="4"/>
+        <circle cx="35" cy="21" r="4" fill="#95ED21"/>
+        <text x="35" y="80" text-anchor="middle" class="tiny caps" fill="#1A1A1A">HI</text>
+      </g>
+      <g transform="translate(15,242)">
+        <circle cx="35" cy="35" r="30" fill="#D0D0D0" filter="url(#shadow)"/>
+        <circle cx="35" cy="35" r="22" fill="none" stroke="#FF8736" stroke-width="4"/>
+        <circle cx="35" cy="21" r="4" fill="#FF8736"/>
+        <text x="35" y="80" text-anchor="middle" class="tiny caps" fill="#1A1A1A">MID</text>
+      </g>
+      <g transform="translate(15,342)">
+        <circle cx="35" cy="35" r="30" fill="#D0D0D0" filter="url(#shadow)"/>
+        <circle cx="35" cy="35" r="22" fill="none" stroke="#008CD3" stroke-width="4"/>
+        <circle cx="35" cy="21" r="4" fill="#008CD3"/>
+        <text x="35" y="80" text-anchor="middle" class="tiny caps" fill="#1A1A1A">LOW</text>
+      </g>
+    </g>
+
+    <g id="deck-display-a" transform="translate(145,108)">
+      <circle cx="200" cy="145" r="120" fill="url(#panelMetal)" filter="url(#shadow)"/>
+      <circle cx="200" cy="145" r="110" fill="#D8D8D8"/>
+      <circle cx="200" cy="145" r="103" fill="none" stroke="#7B7B7B" stroke-opacity="0.2" stroke-width="2"/>
+      <circle cx="200" cy="145" r="103" fill="none" stroke="#FF9457" stroke-width="3" stroke-dasharray="420 180" transform="rotate(-90 200 145)"/>
+      <circle cx="200" cy="42" r="6" fill="#FF9457"/>
+      <text x="200" y="136" text-anchor="middle" class="mono" font-size="44" font-weight="800" fill="#222222">122.0</text>
+      <text x="200" y="161" text-anchor="middle" class="tiny caps" fill="#555555">BPM</text>
+      <text x="200" y="203" text-anchor="middle" class="mono" font-size="24" font-weight="800" fill="#222222">01:19.7</text>
+      <text x="200" y="224" text-anchor="middle" class="mono" font-size="15" font-weight="700" fill="#666666">03:36.4</text>
+      <rect x="145" y="180" width="110" height="4" rx="2" fill="#FF9457"/>
+    </g>
+
+    <g id="center-waveforms">
+      <rect x="602" y="76" width="236" height="748" rx="12" fill="#111111" fill-opacity="0.25"/>
+      <rect x="610" y="84" width="104" height="732" rx="8" fill="#000000" fill-opacity="0.72"/>
+      <rect x="726" y="84" width="104" height="732" rx="8" fill="#000000" fill-opacity="0.72"/>
+      <rect x="716" y="84" width="8" height="732" fill="#000000" fill-opacity="0.5"/>
+      <rect x="602" y="447" width="236" height="6" rx="3" fill="#FFFFFF"/>
+      <text x="662" y="108" text-anchor="middle" class="tiny mono" fill="#FF9457">122 BPM</text>
+      <text x="778" y="108" text-anchor="middle" class="tiny mono" fill="#2E8DFF">120 BPM</text>
+      <g fill="#FFFFFF" fill-opacity="0.08">
+        <rect x="618" y="134" width="88" height="1"/>
+        <rect x="618" y="198" width="88" height="1"/>
+        <rect x="618" y="262" width="88" height="1"/>
+        <rect x="618" y="326" width="88" height="1"/>
+        <rect x="618" y="390" width="88" height="1"/>
+        <rect x="734" y="134" width="88" height="1"/>
+        <rect x="734" y="198" width="88" height="1"/>
+        <rect x="734" y="262" width="88" height="1"/>
+        <rect x="734" y="326" width="88" height="1"/>
+        <rect x="734" y="390" width="88" height="1"/>
+      </g>
+      <g fill="#FF9457" fill-opacity="0.9">
+        <rect x="650" y="140" width="20" height="3" rx="2"/>
+        <rect x="634" y="170" width="55" height="3" rx="2"/>
+        <rect x="645" y="200" width="32" height="3" rx="2"/>
+        <rect x="622" y="230" width="78" height="3" rx="2"/>
+        <rect x="636" y="260" width="50" height="3" rx="2"/>
+        <rect x="626" y="290" width="71" height="3" rx="2"/>
+        <rect x="643" y="320" width="36" height="3" rx="2"/>
+        <rect x="619" y="350" width="84" height="3" rx="2"/>
+        <rect x="639" y="380" width="44" height="3" rx="2"/>
+        <rect x="625" y="410" width="72" height="3" rx="2"/>
+        <rect x="645" y="470" width="30" height="3" rx="2"/>
+        <rect x="624" y="500" width="76" height="3" rx="2"/>
+        <rect x="638" y="530" width="49" height="3" rx="2"/>
+        <rect x="627" y="560" width="70" height="3" rx="2"/>
+        <rect x="642" y="590" width="35" height="3" rx="2"/>
+        <rect x="620" y="620" width="82" height="3" rx="2"/>
+        <rect x="636" y="650" width="52" height="3" rx="2"/>
+        <rect x="628" y="680" width="66" height="3" rx="2"/>
+      </g>
+      <g fill="#2E8DFF" fill-opacity="0.9">
+        <rect x="758" y="140" width="24" height="3" rx="2"/>
+        <rect x="742" y="170" width="56" height="3" rx="2"/>
+        <rect x="754" y="200" width="33" height="3" rx="2"/>
+        <rect x="730" y="230" width="80" height="3" rx="2"/>
+        <rect x="742" y="260" width="52" height="3" rx="2"/>
+        <rect x="734" y="290" width="69" height="3" rx="2"/>
+        <rect x="754" y="320" width="35" height="3" rx="2"/>
+        <rect x="731" y="350" width="79" height="3" rx="2"/>
+        <rect x="746" y="380" width="47" height="3" rx="2"/>
+        <rect x="735" y="410" width="66" height="3" rx="2"/>
+        <rect x="752" y="470" width="28" height="3" rx="2"/>
+        <rect x="732" y="500" width="78" height="3" rx="2"/>
+        <rect x="744" y="530" width="53" height="3" rx="2"/>
+        <rect x="736" y="560" width="67" height="3" rx="2"/>
+        <rect x="753" y="590" width="36" height="3" rx="2"/>
+        <rect x="731" y="620" width="80" height="3" rx="2"/>
+        <rect x="744" y="650" width="48" height="3" rx="2"/>
+        <rect x="737" y="680" width="63" height="3" rx="2"/>
+      </g>
+      <rect x="714" y="116" width="6" height="700" fill="url(#faderFill)" rx="3"/>
+      <rect x="720" y="116" width="6" height="700" fill="url(#faderFill)" rx="3"/>
+    </g>
+
+    <g id="deck-display-b" transform="translate(910,108)">
+      <circle cx="200" cy="145" r="120" fill="url(#panelMetal)" filter="url(#shadow)"/>
+      <circle cx="200" cy="145" r="110" fill="#D8D8D8"/>
+      <circle cx="200" cy="145" r="103" fill="none" stroke="#7B7B7B" stroke-opacity="0.2" stroke-width="2"/>
+      <circle cx="200" cy="145" r="103" fill="none" stroke="#2E8DFF" stroke-width="3" stroke-dasharray="390 210" transform="rotate(-90 200 145)"/>
+      <circle cx="200" cy="42" r="6" fill="#2E8DFF"/>
+      <text x="200" y="136" text-anchor="middle" class="mono" font-size="44" font-weight="800" fill="#222222">120.0</text>
+      <text x="200" y="161" text-anchor="middle" class="tiny caps" fill="#555555">BPM</text>
+      <text x="200" y="203" text-anchor="middle" class="mono" font-size="24" font-weight="800" fill="#222222">02:12.4</text>
+      <text x="200" y="224" text-anchor="middle" class="mono" font-size="15" font-weight="700" fill="#666666">03:36.4</text>
+      <rect x="145" y="180" width="110" height="4" rx="2" fill="#2E8DFF"/>
+    </g>
+
+    <g id="right-panel">
+      <rect x="1340" y="64" width="100" height="56" fill="#D0D0D0"/>
+      <text x="1390" y="88" text-anchor="middle" class="small caps" fill="#1A1A1A">Mixer</text>
+      <path d="M1358 104 L1368 98 L1368 110 Z" fill="#1A1A1A" fill-opacity="0.6"/>
+      <path d="M1422 104 L1412 98 L1412 110 Z" fill="#1A1A1A" fill-opacity="0.6"/>
+      <g transform="translate(1355,142)">
+        <circle cx="35" cy="35" r="30" fill="#D0D0D0" filter="url(#shadow)"/>
+        <circle cx="35" cy="35" r="22" fill="none" stroke="#95ED21" stroke-width="4"/>
+        <circle cx="35" cy="21" r="4" fill="#95ED21"/>
+        <text x="35" y="80" text-anchor="middle" class="tiny caps" fill="#1A1A1A">HI</text>
+      </g>
+      <g transform="translate(1355,242)">
+        <circle cx="35" cy="35" r="30" fill="#D0D0D0" filter="url(#shadow)"/>
+        <circle cx="35" cy="35" r="22" fill="none" stroke="#FF8736" stroke-width="4"/>
+        <circle cx="35" cy="21" r="4" fill="#FF8736"/>
+        <text x="35" y="80" text-anchor="middle" class="tiny caps" fill="#1A1A1A">MID</text>
+      </g>
+      <g transform="translate(1355,342)">
+        <circle cx="35" cy="35" r="30" fill="#D0D0D0" filter="url(#shadow)"/>
+        <circle cx="35" cy="35" r="22" fill="none" stroke="#008CD3" stroke-width="4"/>
+        <circle cx="35" cy="21" r="4" fill="#008CD3"/>
+        <text x="35" y="80" text-anchor="middle" class="tiny caps" fill="#1A1A1A">LOW</text>
+      </g>
+    </g>
+  </g>
+
+  <g id="bottom-controls">
+    <g transform="translate(0,450)">
+      <rect x="16" y="18" width="68" height="28" rx="14" fill="url(#panelMetal)"/>
+      <text x="50" y="36" text-anchor="middle" class="label" fill="#FF9457">SYNC</text>
+      <text x="50" y="70" text-anchor="middle" class="tiny mono" fill="#222222">122.0</text>
+      <text x="50" y="84" text-anchor="middle" class="micro mono" fill="#555555">0.0%</text>
+      <rect x="42" y="112" width="16" height="150" rx="8" fill="#111111" fill-opacity="0.34"/>
+      <rect x="34" y="160" width="32" height="42" rx="16" fill="url(#faderFill)" stroke="#FF9457" stroke-width="3"/>
+    </g>
+
+    <g transform="translate(100,450)">
+      <text x="24" y="26" class="tiny caps" fill="#FF9457">HOT CUE</text>
+      <text x="100" y="26" class="tiny caps" fill="#1A1A1A" fill-opacity="0.2">PAD FX</text>
+      <text x="160" y="26" class="tiny caps" fill="#1A1A1A" fill-opacity="0.2">SAMPLE</text>
+      <g>
+        <rect x="354" y="12" width="24" height="14" rx="7" fill="url(#panelMetal)"/><text x="366" y="22" text-anchor="middle" class="micro" fill="#222">1/8</text>
+        <rect x="382" y="12" width="24" height="14" rx="7" fill="url(#panelMetal)"/><text x="394" y="22" text-anchor="middle" class="micro" fill="#222">1/4</text>
+        <rect x="410" y="12" width="24" height="14" rx="7" fill="url(#panelMetal)"/><text x="422" y="22" text-anchor="middle" class="micro" fill="#222">1/2</text>
+        <rect x="438" y="12" width="24" height="14" rx="7" fill="url(#panelMetal)"/><text x="450" y="22" text-anchor="middle" class="micro" fill="#222">1</text>
+      </g>
+      <g transform="translate(20,50)">
+        <g><rect x="0" y="0" width="105" height="115" rx="18" fill="url(#panelMetal)"/><circle cx="52" cy="32" r="7" fill="#FF3B30"/><text x="52" y="67" text-anchor="middle" class="micro caps" fill="#444">START</text></g>
+        <g transform="translate(115,0)"><rect x="0" y="0" width="105" height="115" rx="18" fill="url(#panelMetal)"/><circle cx="52" cy="32" r="7" fill="#FF9500"/><text x="52" y="67" text-anchor="middle" class="micro caps" fill="#444">INTRO</text></g>
+        <g transform="translate(230,0)"><rect x="0" y="0" width="105" height="115" rx="18" fill="url(#panelMetal)"/><circle cx="52" cy="32" r="7" fill="#007AFF"/><text x="52" y="67" text-anchor="middle" class="micro caps" fill="#444">BUILD</text></g>
+        <g transform="translate(345,0)"><rect x="0" y="0" width="105" height="115" rx="18" fill="url(#panelMetal)"/><circle cx="52" cy="32" r="7" fill="#FFCC00"/><text x="52" y="67" text-anchor="middle" class="micro caps" fill="#444">DROP</text></g>
+      </g>
+      <g transform="translate(20,185)">
+        <rect x="0" y="0" width="105" height="24" rx="12" fill="url(#panelMetal)"/><text x="52" y="15" text-anchor="middle" class="micro caps" fill="#FF9457">VOCAL</text>
+        <rect x="115" y="0" width="105" height="24" rx="12" fill="url(#panelMetal)"/><text x="167" y="15" text-anchor="middle" class="micro caps" fill="#666">MELODY</text>
+        <rect x="230" y="0" width="105" height="24" rx="12" fill="url(#panelMetal)"/><text x="282" y="15" text-anchor="middle" class="micro caps" fill="#666">BASS</text>
+        <rect x="345" y="0" width="105" height="24" rx="12" fill="url(#panelMetal)"/><text x="397" y="15" text-anchor="middle" class="micro caps" fill="#666">DRUMS</text>
+      </g>
+    </g>
+
+    <g transform="translate(850,450)">
+      <text x="24" y="26" class="tiny caps" fill="#2E8DFF">HOT CUE</text>
+      <text x="100" y="26" class="tiny caps" fill="#1A1A1A" fill-opacity="0.2">PAD FX</text>
+      <text x="160" y="26" class="tiny caps" fill="#1A1A1A" fill-opacity="0.2">SAMPLE</text>
+      <g>
+        <rect x="354" y="12" width="24" height="14" rx="7" fill="url(#panelMetal)"/><text x="366" y="22" text-anchor="middle" class="micro" fill="#222">1/8</text>
+        <rect x="382" y="12" width="24" height="14" rx="7" fill="url(#panelMetal)"/><text x="394" y="22" text-anchor="middle" class="micro" fill="#222">1/4</text>
+        <rect x="410" y="12" width="24" height="14" rx="7" fill="url(#panelMetal)"/><text x="422" y="22" text-anchor="middle" class="micro" fill="#222">1/2</text>
+        <rect x="438" y="12" width="24" height="14" rx="7" fill="url(#panelMetal)"/><text x="450" y="22" text-anchor="middle" class="micro" fill="#222">1</text>
+      </g>
+      <g transform="translate(20,50)">
+        <g><rect x="0" y="0" width="105" height="115" rx="18" fill="url(#panelMetal)"/><circle cx="52" cy="32" r="7" fill="#FF3B30"/><text x="52" y="67" text-anchor="middle" class="micro caps" fill="#444">START</text></g>
+        <g transform="translate(115,0)"><rect x="0" y="0" width="105" height="115" rx="18" fill="url(#panelMetal)"/><circle cx="52" cy="32" r="7" fill="#FF9500"/><text x="52" y="67" text-anchor="middle" class="micro caps" fill="#444">INTRO</text></g>
+        <g transform="translate(230,0)"><rect x="0" y="0" width="105" height="115" rx="18" fill="url(#panelMetal)"/><circle cx="52" cy="32" r="7" fill="#007AFF"/><text x="52" y="67" text-anchor="middle" class="micro caps" fill="#444">BUILD</text></g>
+        <g transform="translate(345,0)"><rect x="0" y="0" width="105" height="115" rx="18" fill="url(#panelMetal)"/><circle cx="52" cy="32" r="7" fill="#FFCC00"/><text x="52" y="67" text-anchor="middle" class="micro caps" fill="#444">DROP</text></g>
+      </g>
+      <g transform="translate(20,185)">
+        <rect x="0" y="0" width="105" height="24" rx="12" fill="url(#panelMetal)"/><text x="52" y="15" text-anchor="middle" class="micro caps" fill="#2E8DFF">VOCAL</text>
+        <rect x="115" y="0" width="105" height="24" rx="12" fill="url(#panelMetal)"/><text x="167" y="15" text-anchor="middle" class="micro caps" fill="#666">MELODY</text>
+        <rect x="230" y="0" width="105" height="24" rx="12" fill="url(#panelMetal)"/><text x="282" y="15" text-anchor="middle" class="micro caps" fill="#666">BASS</text>
+        <rect x="345" y="0" width="105" height="24" rx="12" fill="url(#panelMetal)"/><text x="397" y="15" text-anchor="middle" class="micro caps" fill="#666">DRUMS</text>
+      </g>
+    </g>
+
+    <g transform="translate(1340,450)">
+      <rect x="16" y="18" width="68" height="28" rx="14" fill="url(#panelMetal)"/>
+      <text x="50" y="36" text-anchor="middle" class="label" fill="#2E8DFF">SYNC</text>
+      <text x="50" y="70" text-anchor="middle" class="tiny mono" fill="#222222">120.0</text>
+      <text x="50" y="84" text-anchor="middle" class="micro mono" fill="#555555">0.0%</text>
+      <rect x="42" y="112" width="16" height="150" rx="8" fill="#111111" fill-opacity="0.34"/>
+      <rect x="34" y="160" width="32" height="42" rx="16" fill="url(#faderFill)" stroke="#2E8DFF" stroke-width="3"/>
+    </g>
+  </g>
+
+  <g id="footer">
+    <g transform="translate(36,849)">
+      <rect x="0" y="-9" width="56" height="38" rx="14" fill="url(#panelMetal)" filter="url(#shadow)"/>
+      <path d="M22 3V17" stroke="#3C3C3C" stroke-width="4" stroke-linecap="round"/>
+      <path d="M31 3V17" stroke="#3C3C3C" stroke-width="4" stroke-linecap="round"/>
+      <path d="M39 1L52 10L39 19V1Z" fill="#3C3C3C"/>
+      <rect x="106" y="-9" width="56" height="38" rx="14" fill="url(#panelMetal)" filter="url(#shadow)"/>
+      <circle cx="134" cy="10" r="6" fill="#FF3B30"/>
+      <rect x="176" y="-9" width="72" height="38" rx="14" fill="url(#panelMetal)" filter="url(#shadow)"/>
+      <text x="212" y="14" text-anchor="middle" class="label" fill="#3C3C3C">CUE</text>
+    </g>
+
+    <g transform="translate(522,849)">
+      <path d="M0 10L10 4V16Z" fill="#FFFFFF" fill-opacity="0.2"/>
+      <path d="M396 10L386 4V16Z" fill="#FFFFFF" fill-opacity="0.2"/>
+      <rect x="20" y="8" width="356" height="4" rx="2" fill="#2A2A2A"/>
+      <g fill="#FFFFFF" fill-opacity="0.08">
+        <rect x="20" y="2" width="2" height="16"/>
+        <rect x="108" y="2" width="2" height="16"/>
+        <rect x="198" y="2" width="2" height="16"/>
+        <rect x="286" y="2" width="2" height="16"/>
+        <rect x="374" y="2" width="2" height="16"/>
+      </g>
+      <rect x="188" y="-6" width="28" height="34" rx="14" fill="url(#faderFill)" stroke="#FF823C" stroke-width="3" filter="url(#shadow)"/>
+      <rect x="200" y="2" width="4" height="18" rx="2" fill="#FF823C" fill-opacity="0.4"/>
+    </g>
+
+    <g transform="translate(1160,849)">
+      <rect x="0" y="-9" width="72" height="38" rx="14" fill="url(#panelMetal)" filter="url(#shadow)"/>
+      <text x="36" y="14" text-anchor="middle" class="label" fill="#3C3C3C">CUE</text>
+      <rect x="86" y="-9" width="56" height="38" rx="14" fill="url(#panelMetal)" filter="url(#shadow)"/>
+      <circle cx="114" cy="10" r="6" fill="#FF3B30"/>
+      <rect x="156" y="-9" width="56" height="38" rx="14" fill="url(#panelMetal)" filter="url(#shadow)"/>
+      <path d="M178 3V17" stroke="#3C3C3C" stroke-width="4" stroke-linecap="round"/>
+      <path d="M187 3V17" stroke="#3C3C3C" stroke-width="4" stroke-linecap="round"/>
+      <path d="M195 1L208 10L195 19V1Z" fill="#3C3C3C"/>
+    </g>
+  </g>
+</svg>
