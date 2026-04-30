@@ -1314,7 +1314,7 @@ export default function App() {
   const hotCuesB = hotCueBanks[hotCueBankB];
 
   return (
-    <div className="h-screen [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[100dvh] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:min-h-[100dvh] w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans relative">
+    <div className="h-screen [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[100svh] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:min-h-[100svh] w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans relative">
       
       {/* 1. Header: Song Information & Global Controls - Further shrunk height and updated color */}
       <header className="h-[72px] grid grid-cols-[1fr_auto_1fr] bg-[#3C3C3C] shrink-0 z-50 border-b border-white/10">
@@ -1924,7 +1924,7 @@ export default function App() {
       </div>
 
     {/* 4. Footer: Transport Controls & Crossfader - Updated button styles and shortened range */}
-    <footer className="h-20 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[calc(64px+env(safe-area-inset-bottom))] grid grid-cols-[auto_1fr_auto] gap-0 items-center px-6 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-4 pt-0 pb-[max(env(safe-area-inset-bottom),0px)] shrink-0 bg-[#3C3C3C] border-t border-white/10 shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
+    <footer className="h-20 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[calc(74px+env(safe-area-inset-bottom))] grid grid-cols-[auto_1fr_auto] gap-0 items-center px-6 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-4 pt-0 pb-[calc(env(safe-area-inset-bottom)+2px)] shrink-0 bg-[#3C3C3C] border-t border-white/10 shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
         {/* Left Controls */}
         <div className="flex items-center gap-3 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
           <button 
