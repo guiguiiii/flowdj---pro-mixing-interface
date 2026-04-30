@@ -79,7 +79,7 @@ const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: n
 );
 
 const transportPlayButtonClassName =
-  "w-14 h-10 [@media(max-height:1100px)]:w-12 [@media(max-height:1100px)]:h-9 rounded-[12px] flex items-center justify-center border border-white/10 bg-[#D0D0D0] shadow-[-2px_-2px_4px_rgba(78,78,78,0.12),2px_2px_4px_rgba(42,42,42,0.35)] transition-transform duration-150 hover:scale-[1.02] active:scale-95 active:shadow-[inset_-2px_-2px_4px_rgba(78,78,78,0.12),inset_2px_2px_4px_rgba(42,42,42,0.3)]";
+  "w-14 h-10 rounded-[12px] flex items-center justify-center border border-white/10 bg-[#D0D0D0] shadow-[-2px_-2px_4px_rgba(78,78,78,0.12),2px_2px_4px_rgba(42,42,42,0.35)] transition-transform duration-150 hover:scale-[1.02] active:scale-95 active:shadow-[inset_-2px_-2px_4px_rgba(78,78,78,0.12),inset_2px_2px_4px_rgba(42,42,42,0.3)]";
 const orbitSpinClassName = 'motion-safe:animate-[spin_2s_linear_infinite]';
 const defaultDeckAudioState = { currentTime: 0, duration: 0, error: null as string | null };
 const defaultWaveformState = {
@@ -654,7 +654,7 @@ const DeckDisplay = ({
   return (
     <div className="flex flex-col items-center justify-center gap-1 w-full h-full relative p-1 min-w-0">
       {/* Circular Data Meter - Enlarged by another 20% while keeping container height fixed */}
-      <div className="relative w-[150px] h-[150px] md:w-[165px] md:h-[165px] xl:w-[185px] xl:h-[185px] [@media(max-height:1100px)]:w-[126px] [@media(max-height:1100px)]:h-[126px] md:[@media(max-height:1100px)]:w-[142px] md:[@media(max-height:1100px)]:h-[142px] rounded-full neu-convex border-[5px] xl:border-[6px] border-[#D1D1D1] flex flex-col items-center justify-center shadow-xl overflow-visible shrink-0">
+      <div className="relative w-[150px] h-[150px] md:w-[165px] md:h-[165px] xl:w-[185px] xl:h-[185px] rounded-full neu-convex border-[5px] xl:border-[6px] border-[#D1D1D1] flex flex-col items-center justify-center shadow-xl overflow-visible shrink-0">
       {/* Outer Orbit Track & Moving Dot */}
       <div
         className="absolute pointer-events-none left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
@@ -686,23 +686,23 @@ const DeckDisplay = ({
       <div className="absolute inset-0 rounded-full shadow-[inset_0_0_10px_rgba(0,0,0,0.15)] pointer-events-none" />
       
       {/* Main BPM Display */}
-      <div className="text-[28px] md:text-[32px] xl:text-[35px] [@media(max-height:1100px)]:text-[24px] md:[@media(max-height:1100px)]:text-[28px] font-mono font-bold leading-none tracking-tighter text-black/80">{bpm.toFixed(1)}</div>
+      <div className="text-[28px] md:text-[32px] xl:text-[35px] font-mono font-bold leading-none tracking-tighter text-black/80">{bpm.toFixed(1)}</div>
       
       {/* Bottom Info Row (BPM Label, Pitch, Range) */}
-      <div className="relative w-full flex items-center justify-center px-4 md:px-5 xl:px-6 [@media(max-height:1100px)]:px-3 md:[@media(max-height:1100px)]:px-4 mb-1 xl:mb-2">
-        <div className="absolute left-2 md:left-3 [@media(max-height:1100px)]:left-1.5 text-[10px] md:text-[11px] xl:text-[12px] [@media(max-height:1100px)]:text-[9px] md:[@media(max-height:1100px)]:text-[10px] font-mono font-bold text-black/50">+0.0%</div>
-        <div className="text-[11px] md:text-[12px] xl:text-[12px] [@media(max-height:1100px)]:text-[10px] font-bold uppercase tracking-[0.1em] text-black/40">BPM</div>
-        <div className="absolute right-2 md:right-3 [@media(max-height:1100px)]:right-1.5 flex items-center gap-0.5 px-1 rounded bg-black/5 border border-black/10">
+      <div className="relative w-full flex items-center justify-center px-4 md:px-5 xl:px-6 mb-1 xl:mb-2">
+        <div className="absolute left-2 md:left-3 text-[10px] md:text-[11px] xl:text-[12px] font-mono font-bold text-black/50">+0.0%</div>
+        <div className="text-[11px] md:text-[12px] xl:text-[12px] font-bold uppercase tracking-[0.1em] text-black/40">BPM</div>
+        <div className="absolute right-2 md:right-3 flex items-center gap-0.5 px-1 rounded bg-black/5 border border-black/10">
           <span className="text-[7px] font-bold text-black/40">±</span>
-          <span className="text-[10px] md:text-[11px] xl:text-[12px] [@media(max-height:1100px)]:text-[9px] font-mono font-bold text-black/60">8</span>
+          <span className="text-[10px] md:text-[11px] xl:text-[12px] font-mono font-bold text-black/60">8</span>
         </div>
       </div>
       
       {/* Time Display */}
-      <div className="flex flex-col items-center w-24 md:w-28 [@media(max-height:1100px)]:w-20 md:[@media(max-height:1100px)]:w-24 mt-1 md:mt-2 [@media(max-height:1100px)]:mt-0.5">
+      <div className="flex flex-col items-center w-24 md:w-28 mt-1 md:mt-2">
         <div className="w-full h-[3px] rounded-full mb-2" style={{ backgroundColor: color }} />
-        <div className="text-[15px] md:text-[16px] xl:text-[17px] [@media(max-height:1100px)]:text-[13px] md:[@media(max-height:1100px)]:text-[14px] font-mono font-bold text-black/90 tracking-tight">{time}</div>
-        <div className="text-[11px] md:text-[12px] xl:text-[13px] [@media(max-height:1100px)]:text-[10px] md:[@media(max-height:1100px)]:text-[11px] font-mono font-bold text-black/50 leading-none">{duration}</div>
+        <div className="text-[15px] md:text-[16px] xl:text-[17px] font-mono font-bold text-black/90 tracking-tight">{time}</div>
+        <div className="text-[11px] md:text-[12px] xl:text-[13px] font-mono font-bold text-black/50 leading-none">{duration}</div>
       </div>
 
       {/* Progress Ring */}
@@ -1314,10 +1314,10 @@ export default function App() {
   const hotCuesB = hotCueBanks[hotCueBankB];
 
   return (
-    <div className="h-[100dvh] min-h-[100dvh] w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans relative">
+    <div className="h-screen w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans relative">
       
       {/* 1. Header: Song Information & Global Controls - Further shrunk height and updated color */}
-      <header className="h-[72px] [@media(max-height:1100px)]:h-[60px] grid grid-cols-[1fr_auto_1fr] bg-[#3C3C3C] shrink-0 z-50 border-b border-white/10">
+      <header className="h-[72px] grid grid-cols-[1fr_auto_1fr] bg-[#3C3C3C] shrink-0 z-50 border-b border-white/10">
         {/* Deck A Section */}
         <div className="flex bg-[#3C3C3C] relative overflow-hidden group border-r border-white/5">
           {/* Artwork - Flush with top and left */}
@@ -1416,7 +1416,7 @@ export default function App() {
         </div>
       </header>
       {/* 2 & 3. Middle & Bottom Sections: Unified Grid with Spanning Waveforms */}
-      <div className="flex-1 grid grid-cols-[72px_minmax(0,1fr)_220px_minmax(0,1fr)_72px] md:grid-cols-[80px_minmax(0,1fr)_244px_minmax(0,1fr)_80px] xl:grid-cols-[98px_1fr_312px_1fr_98px] [@media(max-height:1100px)]:grid-cols-[64px_minmax(0,1fr)_188px_minmax(0,1fr)_64px] md:[@media(max-height:1100px)]:grid-cols-[68px_minmax(0,1fr)_204px_minmax(0,1fr)_68px] grid-rows-[minmax(0,1fr)_252px] md:grid-rows-[minmax(0,1fr)_276px] xl:grid-rows-[minmax(0,1fr)_320px] [@media(max-height:1100px)]:grid-rows-[minmax(0,1fr)_214px] md:[@media(max-height:1100px)]:grid-rows-[minmax(0,1fr)_228px] gap-0 overflow-hidden">
+      <div className="flex-1 grid grid-cols-[72px_minmax(0,1fr)_220px_minmax(0,1fr)_72px] md:grid-cols-[80px_minmax(0,1fr)_244px_minmax(0,1fr)_80px] xl:grid-cols-[98px_1fr_312px_1fr_98px] grid-rows-[minmax(0,1fr)_252px] md:grid-rows-[minmax(0,1fr)_276px] xl:grid-rows-[minmax(0,1fr)_320px] gap-0 overflow-hidden">
         
         {/* Row 1: Side Panels, Deck Displays */}
         {/* Left Side Panel */}
@@ -1444,7 +1444,7 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex-1 flex flex-col justify-center gap-0 py-0 min-h-0 scale-[0.84] md:scale-[0.92] xl:scale-100 [@media(max-height:1100px)]:scale-[0.68] md:[@media(max-height:1100px)]:scale-[0.76] origin-center">
+          <div className="flex-1 flex flex-col justify-center gap-0 py-0 min-h-0 scale-[0.84] md:scale-[0.92] xl:scale-100 origin-center">
             {modeA === 'Mixer' && (
               <>
                 <Knob 
@@ -1550,7 +1550,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col justify-center gap-0 py-0 min-h-0 scale-[0.84] md:scale-[0.92] xl:scale-100 [@media(max-height:1100px)]:scale-[0.68] md:[@media(max-height:1100px)]:scale-[0.76] origin-center">
+          <div className="flex-1 flex flex-col justify-center gap-0 py-0 min-h-0 scale-[0.84] md:scale-[0.92] xl:scale-100 origin-center">
             {modeB === 'Mixer' && (
               <>
                 <Knob 
@@ -1597,7 +1597,7 @@ export default function App() {
 
         {/* Row 2: Pitch, Hot Cues */}
         {/* Pitch A with Integrated Sync */}
-        <div className="opz-panel p-2 md:p-2.5 xl:p-3 [@media(max-height:1100px)]:p-1.5 flex flex-col items-center justify-between gap-1.5 md:gap-2 [@media(max-height:1100px)]:gap-1 min-w-0 border-r border-black/5" style={{ backgroundColor: '#ADADAD' }}>
+        <div className="opz-panel p-2 md:p-2.5 xl:p-3 flex flex-col items-center justify-between gap-1.5 md:gap-2 min-w-0 border-r border-black/5" style={{ backgroundColor: '#ADADAD' }}>
           <div className="w-full max-w-[72px] md:max-w-[78px] xl:max-w-[86px] flex flex-col items-center gap-1.5 md:gap-2">
           <button onClick={() => syncDeckToOther('A')} className="w-full py-1 md:py-1.5 rounded-xl neu-button text-[10px] xl:text-[11px] font-bold uppercase text-deck-a shrink-0 tracking-[0.14em]">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
@@ -1605,13 +1605,13 @@ export default function App() {
             <div className="text-[9px] md:text-[9.5px] xl:text-[10px] font-mono font-semibold text-black/35">{pitchPercentA.toFixed(1)}%</div>
           </div>
           </div>
-          <div className="flex-1 flex items-center min-h-0 py-2 md:py-3 xl:py-4 [@media(max-height:1100px)]:py-1">
+          <div className="flex-1 flex items-center min-h-0 py-2 md:py-3 xl:py-4">
             <VerticalFader value={pitchA} color={orange} height="h-44 md:h-48 xl:h-56" handleSize="sm" handleOrientation="horizontal" onChange={setPitchA} />
           </div>
         </div>
 
         {/* Named Hot Cues A */}
-        <div className="opz-panel p-1.5 md:p-2 [@media(max-height:1100px)]:p-1 flex flex-col gap-1 md:gap-1.5 [@media(max-height:1100px)]:gap-0.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
+        <div className="opz-panel p-1.5 md:p-2 flex flex-col gap-1 md:gap-1.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
           <div className="flex justify-between items-center shrink-0 gap-1.5 md:gap-2">
             <div className="grid grid-cols-3 gap-1.5 md:gap-2.5 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.14em] md:tracking-[0.16em] flex-1 max-w-[280px] xl:max-w-[320px]">
               <button
@@ -1688,7 +1688,7 @@ export default function App() {
               <button
                 key={i}
                 onClick={() => setSelectedHotCueA(i)}
-                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 [@media(max-height:1100px)]:p-1.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
+                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
                 style={{
                   backgroundColor: selectedHotCueA === i ? '#D8D8D8' : '#D0D0D0',
                   borderColor: selectedHotCueA === i ? cue.color : '#D0D0D0',
@@ -1699,15 +1699,15 @@ export default function App() {
                 }}
               >
                 <div
-                  className="absolute left-1.5 top-1.5 [@media(max-height:1100px)]:left-1 [@media(max-height:1100px)]:top-1 rounded-md px-2 [@media(max-height:1100px)]:px-1.5 py-1 [@media(max-height:1100px)]:py-0.5 text-[12px] [@media(max-height:1100px)]:text-[10px] font-black leading-none transition-all duration-150"
+                  className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none transition-all duration-150"
                   style={{ backgroundColor: cue.color, color: '#111111' }}
                 >
                   {cue.slot}
                 </div>
                 <div className="flex-1" />
                 <div className="space-y-1">
-                  <div className="text-[18px] [@media(max-height:1100px)]:text-[14px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
-                  <div className="text-[10px] [@media(max-height:1100px)]:text-[8px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueA === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
+                  <div className="text-[18px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueA === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
                 </div>
               </button>
             ))}
@@ -1718,7 +1718,7 @@ export default function App() {
                 onPointerUp={() => setActivePadFxA(null)}
                 onPointerLeave={() => setActivePadFxA(null)}
                 onPointerCancel={() => setActivePadFxA(null)}
-                className="rounded-xl min-h-0 border-2 p-2 [@media(max-height:1100px)]:p-1.5 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                className="rounded-xl min-h-0 border-2 p-2 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                 style={{
                   backgroundColor: activePadFxA === pad.id ? '#DADADA' : '#D0D0D0',
                   borderColor: pad.accent,
@@ -1730,8 +1730,8 @@ export default function App() {
               >
                 <div className="flex-1" />
                 <div className="leading-none space-y-1">
-                  <div className="text-[10px] [@media(max-height:1100px)]:text-[8px] font-bold uppercase tracking-[0.12em]" style={{ color: pad.accent }}>{pad.label}</div>
-                  <div className="text-[16px] [@media(max-height:1100px)]:text-[13px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{pad.value}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: pad.accent }}>{pad.label}</div>
+                  <div className="text-[16px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{pad.value}</div>
                 </div>
               </button>
             ))}
@@ -1742,7 +1742,7 @@ export default function App() {
                 onPointerUp={() => setActiveSampleA(null)}
                 onPointerLeave={() => setActiveSampleA(null)}
                 onPointerCancel={() => setActiveSampleA(null)}
-                className="rounded-xl min-h-0 border-2 p-2 [@media(max-height:1100px)]:p-1.5 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                 style={{
                   backgroundColor: activeSampleA === sample.id ? '#DADADA' : '#D0D0D0',
                   borderColor: sample.accent,
@@ -1752,7 +1752,7 @@ export default function App() {
                   transform: activeSampleA === sample.id ? 'translateY(1px)' : 'translateY(0)',
                 }}
               >
-                <span className="text-[12px] [@media(max-height:1100px)]:text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
+                <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
               </button>
             ))}
           </div>
@@ -1761,7 +1761,7 @@ export default function App() {
         {/* Central Column is spanned by the row-span-2 div above */}
 
         {/* Named Hot Cues B */}
-        <div className="opz-panel p-1.5 md:p-2 [@media(max-height:1100px)]:p-1 flex flex-col gap-1 md:gap-1.5 [@media(max-height:1100px)]:gap-0.5 min-w-0 border-l border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
+        <div className="opz-panel p-1.5 md:p-2 flex flex-col gap-1 md:gap-1.5 min-w-0 border-l border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
           <div className="flex justify-between items-center shrink-0 gap-1.5 md:gap-2">
             <div className="grid grid-cols-3 gap-1.5 md:gap-2.5 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.14em] md:tracking-[0.16em] flex-1 max-w-[280px] xl:max-w-[320px]">
               <button
@@ -1838,7 +1838,7 @@ export default function App() {
               <button
                 key={i}
                 onClick={() => setSelectedHotCueB(i)}
-                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 [@media(max-height:1100px)]:p-1.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
+                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
                 style={{
                   backgroundColor: selectedHotCueB === i ? '#D8D8D8' : '#D0D0D0',
                   borderColor: selectedHotCueB === i ? cue.color : '#D0D0D0',
@@ -1849,15 +1849,15 @@ export default function App() {
                 }}
               >
                 <div
-                  className="absolute left-1.5 top-1.5 [@media(max-height:1100px)]:left-1 [@media(max-height:1100px)]:top-1 rounded-md px-2 [@media(max-height:1100px)]:px-1.5 py-1 [@media(max-height:1100px)]:py-0.5 text-[12px] [@media(max-height:1100px)]:text-[10px] font-black leading-none transition-all duration-150"
+                  className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none transition-all duration-150"
                   style={{ backgroundColor: cue.color, color: '#111111' }}
                 >
                   {cue.slot}
                 </div>
                 <div className="flex-1" />
                 <div className="space-y-1">
-                  <div className="text-[18px] [@media(max-height:1100px)]:text-[14px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
-                  <div className="text-[10px] [@media(max-height:1100px)]:text-[8px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueB === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
+                  <div className="text-[18px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueB === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
                 </div>
               </button>
             ))}
@@ -1868,7 +1868,7 @@ export default function App() {
                 onPointerUp={() => setActivePadFxB(null)}
                 onPointerLeave={() => setActivePadFxB(null)}
                 onPointerCancel={() => setActivePadFxB(null)}
-                className="rounded-xl min-h-0 border-2 p-2 [@media(max-height:1100px)]:p-1.5 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                className="rounded-xl min-h-0 border-2 p-2 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                 style={{
                   backgroundColor: activePadFxB === pad.id ? '#DADADA' : '#D0D0D0',
                   borderColor: pad.accent,
@@ -1880,8 +1880,8 @@ export default function App() {
               >
                 <div className="flex-1" />
                 <div className="leading-none space-y-1">
-                  <div className="text-[10px] [@media(max-height:1100px)]:text-[8px] font-bold uppercase tracking-[0.12em]" style={{ color: pad.accent }}>{pad.label}</div>
-                  <div className="text-[16px] [@media(max-height:1100px)]:text-[13px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{pad.value}</div>
+                  <div className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: pad.accent }}>{pad.label}</div>
+                  <div className="text-[16px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{pad.value}</div>
                 </div>
               </button>
             ))}
@@ -1892,7 +1892,7 @@ export default function App() {
                 onPointerUp={() => setActiveSampleB(null)}
                 onPointerLeave={() => setActiveSampleB(null)}
                 onPointerCancel={() => setActiveSampleB(null)}
-                className="rounded-xl min-h-0 border-2 p-2 [@media(max-height:1100px)]:p-1.5 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                 style={{
                   backgroundColor: activeSampleB === sample.id ? '#DADADA' : '#D0D0D0',
                   borderColor: sample.accent,
@@ -1902,14 +1902,14 @@ export default function App() {
                   transform: activeSampleB === sample.id ? 'translateY(1px)' : 'translateY(0)',
                 }}
               >
-                <span className="text-[12px] [@media(max-height:1100px)]:text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
+                <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
               </button>
             ))}
           </div>
         </div>
 
         {/* Pitch B with Integrated Sync */}
-        <div className="opz-panel p-2 md:p-2.5 xl:p-3 [@media(max-height:1100px)]:p-1.5 flex flex-col items-center justify-between gap-1.5 md:gap-2 [@media(max-height:1100px)]:gap-1 min-w-0 border-l border-black/5" style={{ backgroundColor: '#ADADAD' }}>
+        <div className="opz-panel p-2 md:p-2.5 xl:p-3 flex flex-col items-center justify-between gap-1.5 md:gap-2 min-w-0 border-l border-black/5" style={{ backgroundColor: '#ADADAD' }}>
           <div className="w-full max-w-[72px] md:max-w-[78px] xl:max-w-[86px] flex flex-col items-center gap-1.5 md:gap-2">
           <button onClick={() => syncDeckToOther('B')} className="w-full py-1 md:py-1.5 rounded-xl neu-button text-[10px] xl:text-[11px] font-bold uppercase text-deck-b shrink-0 tracking-[0.14em]">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
@@ -1917,33 +1917,33 @@ export default function App() {
             <div className="text-[9px] md:text-[9.5px] xl:text-[10px] font-mono font-semibold text-black/35">{pitchPercentB.toFixed(1)}%</div>
           </div>
           </div>
-          <div className="flex-1 flex items-center min-h-0 py-2 md:py-3 xl:py-4 [@media(max-height:1100px)]:py-1">
+          <div className="flex-1 flex items-center min-h-0 py-2 md:py-3 xl:py-4">
             <VerticalFader value={pitchB} color={blue} height="h-44 md:h-48 xl:h-56" handleSize="sm" handleOrientation="horizontal" onChange={setPitchB} />
           </div>
         </div>
       </div>
 
     {/* 4. Footer: Transport Controls & Crossfader - Updated button styles and shortened range */}
-    <footer className="h-20 [@media(max-height:1100px)]:h-16 grid grid-cols-[auto_1fr_auto] gap-0 items-center px-6 [@media(max-height:1100px)]:px-4 pt-0 pb-[max(env(safe-area-inset-bottom),0px)] shrink-0 bg-[#3C3C3C] border-t border-white/10 shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
+    <footer className="h-20 grid grid-cols-[auto_1fr_auto] gap-0 items-center px-6 shrink-0 bg-[#3C3C3C] border-t border-white/10 shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
         {/* Left Controls */}
-        <div className="flex items-center gap-2 [@media(max-height:1100px)]:gap-1.5">
+        <div className="flex items-center gap-3">
           <button 
             onClick={() => void toggleDeckPlayback('A')} 
             className={transportPlayButtonClassName}
           >
             <PlayPauseIcon />
           </button>
-          <button className="px-4 [@media(max-height:1100px)]:px-3 h-10 [@media(max-height:1100px)]:h-9 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10 group">
+          <button className="px-4 h-10 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10 group">
             <div className="w-2.5 h-2.5 bg-[#FF3B30] rounded-full shadow-[0_0_10px_#FF3B30] group-hover:scale-110 transition-transform" />
           </button>
-          <button className="px-4 [@media(max-height:1100px)]:px-3 h-10 [@media(max-height:1100px)]:h-9 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10">
-            <span className="text-[10px] [@media(max-height:1100px)]:text-[9px] font-bold text-[#3C3C3C] tracking-widest">CUE</span>
+          <button className="px-4 h-10 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10">
+            <span className="text-[10px] font-bold text-[#3C3C3C] tracking-widest">CUE</span>
           </button>
         </div>
 
         {/* Center Crossfader Section */}
-        <div className="flex items-center justify-center px-8 [@media(max-height:1100px)]:px-4 relative h-full">
-          <div className="flex items-center gap-3 [@media(max-height:1100px)]:gap-2 w-full max-w-[280px] [@media(max-height:1100px)]:max-w-[220px] h-10 [@media(max-height:1100px)]:h-9 relative">
+        <div className="flex items-center justify-center px-8 relative h-full">
+          <div className="flex items-center gap-3 w-full max-w-[280px] h-10 relative">
             {/* Left Arrow Icon */}
             <div className="w-0 h-0 border-t-[4px] border-t-transparent border-r-[6px] border-r-white/20 border-b-[4px] border-b-transparent shrink-0" />
             
@@ -1981,11 +1981,11 @@ export default function App() {
         </div>
 
         {/* Right Controls */}
-        <div className="flex items-center gap-2 [@media(max-height:1100px)]:gap-1.5">
-          <button className="px-4 [@media(max-height:1100px)]:px-3 h-10 [@media(max-height:1100px)]:h-9 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10">
-            <span className="text-[10px] [@media(max-height:1100px)]:text-[9px] font-bold text-[#3C3C3C] tracking-widest">CUE</span>
+        <div className="flex items-center gap-3">
+          <button className="px-4 h-10 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10">
+            <span className="text-[10px] font-bold text-[#3C3C3C] tracking-widest">CUE</span>
           </button>
-          <button className="px-4 [@media(max-height:1100px)]:px-3 h-10 [@media(max-height:1100px)]:h-9 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10 group">
+          <button className="px-4 h-10 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10 group">
             <div className="w-2.5 h-2.5 bg-[#FF3B30] rounded-full shadow-[0_0_10px_#FF3B30] group-hover:scale-110 transition-transform" />
           </button>
           <button 
