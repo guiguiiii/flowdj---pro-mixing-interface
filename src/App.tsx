@@ -1314,7 +1314,7 @@ export default function App() {
   const hotCuesB = hotCueBanks[hotCueBankB];
 
   return (
-    <div className="h-screen w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans relative">
+    <div className="h-screen [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[100dvh] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:min-h-[100dvh] w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans relative">
       
       {/* 1. Header: Song Information & Global Controls - Further shrunk height and updated color */}
       <header className="h-[72px] grid grid-cols-[1fr_auto_1fr] bg-[#3C3C3C] shrink-0 z-50 border-b border-white/10">
@@ -1416,7 +1416,7 @@ export default function App() {
         </div>
       </header>
       {/* 2 & 3. Middle & Bottom Sections: Unified Grid with Spanning Waveforms */}
-      <div className="flex-1 grid grid-cols-[72px_minmax(0,1fr)_220px_minmax(0,1fr)_72px] md:grid-cols-[80px_minmax(0,1fr)_244px_minmax(0,1fr)_80px] xl:grid-cols-[98px_1fr_312px_1fr_98px] grid-rows-[minmax(0,1fr)_252px] md:grid-rows-[minmax(0,1fr)_276px] xl:grid-rows-[minmax(0,1fr)_320px] gap-0 overflow-hidden">
+      <div className="flex-1 grid grid-cols-[72px_minmax(0,1fr)_220px_minmax(0,1fr)_72px] md:grid-cols-[80px_minmax(0,1fr)_244px_minmax(0,1fr)_80px] xl:grid-cols-[98px_1fr_312px_1fr_98px] grid-rows-[minmax(0,1fr)_252px] md:grid-rows-[minmax(0,1fr)_276px] xl:grid-rows-[minmax(0,1fr)_320px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:grid-rows-[minmax(0,1fr)_224px] gap-0 overflow-hidden">
         
         {/* Row 1: Side Panels, Deck Displays */}
         {/* Left Side Panel */}
@@ -1597,23 +1597,23 @@ export default function App() {
 
         {/* Row 2: Pitch, Hot Cues */}
         {/* Pitch A with Integrated Sync */}
-        <div className="opz-panel p-2 md:p-2.5 xl:p-3 flex flex-col items-center justify-between gap-1.5 md:gap-2 min-w-0 border-r border-black/5" style={{ backgroundColor: '#ADADAD' }}>
-          <div className="w-full max-w-[72px] md:max-w-[78px] xl:max-w-[86px] flex flex-col items-center gap-1.5 md:gap-2">
-          <button onClick={() => syncDeckToOther('A')} className="w-full py-1 md:py-1.5 rounded-xl neu-button text-[10px] xl:text-[11px] font-bold uppercase text-deck-a shrink-0 tracking-[0.14em]">Sync</button>
+        <div className="opz-panel p-2 md:p-2.5 xl:p-3 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex flex-col items-center justify-between gap-1.5 md:gap-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1 min-w-0 border-r border-black/5" style={{ backgroundColor: '#ADADAD' }}>
+          <div className="w-full max-w-[72px] md:max-w-[78px] xl:max-w-[86px] flex flex-col items-center gap-1.5 md:gap-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1">
+          <button onClick={() => syncDeckToOther('A')} className="w-full py-1 md:py-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-xl neu-button text-[10px] xl:text-[11px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold uppercase text-deck-a shrink-0 tracking-[0.14em]">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <div className="text-[14px] md:text-[15px] xl:text-[16px] font-mono font-bold text-black/80">{effectiveBpmA.toFixed(1)}</div>
-            <div className="text-[9px] md:text-[9.5px] xl:text-[10px] font-mono font-semibold text-black/35">{pitchPercentA.toFixed(1)}%</div>
+            <div className="text-[14px] md:text-[15px] xl:text-[16px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[12px] font-mono font-bold text-black/80">{effectiveBpmA.toFixed(1)}</div>
+            <div className="text-[9px] md:text-[9.5px] xl:text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-mono font-semibold text-black/35">{pitchPercentA.toFixed(1)}%</div>
           </div>
           </div>
-          <div className="flex-1 flex items-center min-h-0 py-2 md:py-3 xl:py-4">
+          <div className="flex-1 flex items-center min-h-0 py-2 md:py-3 xl:py-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-1">
             <VerticalFader value={pitchA} color={orange} height="h-44 md:h-48 xl:h-56" handleSize="sm" handleOrientation="horizontal" onChange={setPitchA} />
           </div>
         </div>
 
         {/* Named Hot Cues A */}
-        <div className="opz-panel p-1.5 md:p-2 flex flex-col gap-1 md:gap-1.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
-          <div className="flex justify-between items-center shrink-0 gap-1.5 md:gap-2">
-            <div className="grid grid-cols-3 gap-1.5 md:gap-2.5 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.14em] md:tracking-[0.16em] flex-1 max-w-[280px] xl:max-w-[320px]">
+        <div className="opz-panel p-1.5 md:p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1 flex flex-col gap-1 md:gap-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-0.5 min-w-0 border-r border-black/5" style={{ backgroundColor: '#6C6C6C' }}>
+          <div className="flex justify-between items-center shrink-0 gap-1.5 md:gap-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1">
+            <div className="grid grid-cols-3 gap-1.5 md:gap-2.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1 text-[10px] md:text-[11px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold uppercase tracking-[0.14em] md:tracking-[0.16em] flex-1 max-w-[280px] xl:max-w-[320px]">
               <button
                 onClick={() => setPadModeA('hotCue')}
                 className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeA === 'hotCue' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
@@ -1636,8 +1636,8 @@ export default function App() {
                 Sample
               </button>
             </div>
-            <div className="shrink-0 flex items-center gap-1">
-              <button className="flex items-center gap-1 md:gap-1.5 px-1.5 md:px-2 py-1 rounded-lg neu-button text-[9px] md:text-[10px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] text-black/65">
+            <div className="shrink-0 flex items-center gap-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-0.5">
+              <button className="flex items-center gap-1 md:gap-1.5 px-1.5 md:px-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-1.5 py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-lg neu-button text-[9px] md:text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] text-black/65">
                 <Pencil size={11} strokeWidth={2.2} />
                 <span>Edit</span>
               </button>
@@ -1647,7 +1647,7 @@ export default function App() {
                     <button
                       key={bank}
                       onClick={() => setHotCueBankA(bank)}
-                      className={`px-1.5 md:px-2 py-1 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${hotCueBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                      className={`px-1.5 md:px-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-1 py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-lg text-[8px] md:text-[9px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[7px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${hotCueBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
                     </button>
@@ -1660,7 +1660,7 @@ export default function App() {
                     <button
                       key={bank}
                       onClick={() => setPadFxBankA(bank)}
-                      className={`px-1.5 md:px-2 py-1 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${padFxBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                      className={`px-1.5 md:px-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-1 py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-lg text-[8px] md:text-[9px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[7px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${padFxBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
                     </button>
@@ -1673,7 +1673,7 @@ export default function App() {
                     <button
                       key={bank}
                       onClick={() => setSampleBankA(bank)}
-                      className={`px-1.5 md:px-2 py-1 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${sampleBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
+                      className={`px-1.5 md:px-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-1 py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-lg text-[8px] md:text-[9px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[7px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${sampleBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
                     </button>
@@ -1688,7 +1688,7 @@ export default function App() {
               <button
                 key={i}
                 onClick={() => setSelectedHotCueA(i)}
-                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
+                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
                 style={{
                   backgroundColor: selectedHotCueA === i ? '#D8D8D8' : '#D0D0D0',
                   borderColor: selectedHotCueA === i ? cue.color : '#D0D0D0',
@@ -1699,15 +1699,15 @@ export default function App() {
                 }}
               >
                 <div
-                  className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none transition-all duration-150"
+                  className="absolute left-1.5 top-1.5 rounded-md px-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-1.5 py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 text-[12px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[10px] font-black leading-none transition-all duration-150"
                   style={{ backgroundColor: cue.color, color: '#111111' }}
                 >
                   {cue.slot}
                 </div>
                 <div className="flex-1" />
                 <div className="space-y-1">
-                  <div className="text-[18px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueA === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
+                  <div className="text-[18px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[15px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
+                  <div className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueA === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
                 </div>
               </button>
             ))}
@@ -1718,7 +1718,7 @@ export default function App() {
                 onPointerUp={() => setActivePadFxA(null)}
                 onPointerLeave={() => setActivePadFxA(null)}
                 onPointerCancel={() => setActivePadFxA(null)}
-                className="rounded-xl min-h-0 border-2 p-2 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                className="rounded-xl min-h-0 border-2 p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                 style={{
                   backgroundColor: activePadFxA === pad.id ? '#DADADA' : '#D0D0D0',
                   borderColor: pad.accent,
@@ -1730,8 +1730,8 @@ export default function App() {
               >
                 <div className="flex-1" />
                 <div className="leading-none space-y-1">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: pad.accent }}>{pad.label}</div>
-                  <div className="text-[16px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{pad.value}</div>
+                  <div className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-bold uppercase tracking-[0.12em]" style={{ color: pad.accent }}>{pad.label}</div>
+                  <div className="text-[16px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[13px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{pad.value}</div>
                 </div>
               </button>
             ))}
@@ -1742,7 +1742,7 @@ export default function App() {
                 onPointerUp={() => setActiveSampleA(null)}
                 onPointerLeave={() => setActiveSampleA(null)}
                 onPointerCancel={() => setActiveSampleA(null)}
-                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                className="rounded-xl min-h-0 border-2 p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                 style={{
                   backgroundColor: activeSampleA === sample.id ? '#DADADA' : '#D0D0D0',
                   borderColor: sample.accent,
@@ -1752,7 +1752,7 @@ export default function App() {
                   transform: activeSampleA === sample.id ? 'translateY(1px)' : 'translateY(0)',
                 }}
               >
-                <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
+                <span className="text-[12px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
               </button>
             ))}
           </div>
@@ -1909,41 +1909,41 @@ export default function App() {
         </div>
 
         {/* Pitch B with Integrated Sync */}
-        <div className="opz-panel p-2 md:p-2.5 xl:p-3 flex flex-col items-center justify-between gap-1.5 md:gap-2 min-w-0 border-l border-black/5" style={{ backgroundColor: '#ADADAD' }}>
-          <div className="w-full max-w-[72px] md:max-w-[78px] xl:max-w-[86px] flex flex-col items-center gap-1.5 md:gap-2">
-          <button onClick={() => syncDeckToOther('B')} className="w-full py-1 md:py-1.5 rounded-xl neu-button text-[10px] xl:text-[11px] font-bold uppercase text-deck-b shrink-0 tracking-[0.14em]">Sync</button>
+        <div className="opz-panel p-2 md:p-2.5 xl:p-3 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex flex-col items-center justify-between gap-1.5 md:gap-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1 min-w-0 border-l border-black/5" style={{ backgroundColor: '#ADADAD' }}>
+          <div className="w-full max-w-[72px] md:max-w-[78px] xl:max-w-[86px] flex flex-col items-center gap-1.5 md:gap-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1">
+          <button onClick={() => syncDeckToOther('B')} className="w-full py-1 md:py-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-xl neu-button text-[10px] xl:text-[11px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold uppercase text-deck-b shrink-0 tracking-[0.14em]">Sync</button>
           <div className="flex flex-col items-center leading-none shrink-0">
-            <div className="text-[14px] md:text-[15px] xl:text-[16px] font-mono font-bold text-black/80">{effectiveBpmB.toFixed(1)}</div>
-            <div className="text-[9px] md:text-[9.5px] xl:text-[10px] font-mono font-semibold text-black/35">{pitchPercentB.toFixed(1)}%</div>
+            <div className="text-[14px] md:text-[15px] xl:text-[16px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[12px] font-mono font-bold text-black/80">{effectiveBpmB.toFixed(1)}</div>
+            <div className="text-[9px] md:text-[9.5px] xl:text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-mono font-semibold text-black/35">{pitchPercentB.toFixed(1)}%</div>
           </div>
           </div>
-          <div className="flex-1 flex items-center min-h-0 py-2 md:py-3 xl:py-4">
+          <div className="flex-1 flex items-center min-h-0 py-2 md:py-3 xl:py-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-1">
             <VerticalFader value={pitchB} color={blue} height="h-44 md:h-48 xl:h-56" handleSize="sm" handleOrientation="horizontal" onChange={setPitchB} />
           </div>
         </div>
       </div>
 
     {/* 4. Footer: Transport Controls & Crossfader - Updated button styles and shortened range */}
-    <footer className="h-20 grid grid-cols-[auto_1fr_auto] gap-0 items-center px-6 shrink-0 bg-[#3C3C3C] border-t border-white/10 shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
+    <footer className="h-20 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[calc(64px+env(safe-area-inset-bottom))] grid grid-cols-[auto_1fr_auto] gap-0 items-center px-6 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-4 pt-0 pb-[max(env(safe-area-inset-bottom),0px)] shrink-0 bg-[#3C3C3C] border-t border-white/10 shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
         {/* Left Controls */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-3 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
           <button 
             onClick={() => void toggleDeckPlayback('A')} 
             className={transportPlayButtonClassName}
           >
             <PlayPauseIcon />
           </button>
-          <button className="px-4 h-10 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10 group">
+          <button className="px-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-3 h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-9 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10 group">
             <div className="w-2.5 h-2.5 bg-[#FF3B30] rounded-full shadow-[0_0_10px_#FF3B30] group-hover:scale-110 transition-transform" />
           </button>
-          <button className="px-4 h-10 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10">
-            <span className="text-[10px] font-bold text-[#3C3C3C] tracking-widest">CUE</span>
+          <button className="px-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-3 h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-9 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10">
+            <span className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold text-[#3C3C3C] tracking-widest">CUE</span>
           </button>
         </div>
 
         {/* Center Crossfader Section */}
-        <div className="flex items-center justify-center px-8 relative h-full">
-          <div className="flex items-center gap-3 w-full max-w-[280px] h-10 relative">
+        <div className="flex items-center justify-center px-8 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-4 relative h-full">
+          <div className="flex items-center gap-3 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-2 w-full max-w-[280px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:max-w-[220px] h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-9 relative">
             {/* Left Arrow Icon */}
             <div className="w-0 h-0 border-t-[4px] border-t-transparent border-r-[6px] border-r-white/20 border-b-[4px] border-b-transparent shrink-0" />
             
@@ -1981,11 +1981,11 @@ export default function App() {
         </div>
 
         {/* Right Controls */}
-        <div className="flex items-center gap-3">
-          <button className="px-4 h-10 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10">
-            <span className="text-[10px] font-bold text-[#3C3C3C] tracking-widest">CUE</span>
+        <div className="flex items-center gap-3 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
+          <button className="px-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-3 h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-9 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10">
+            <span className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold text-[#3C3C3C] tracking-widest">CUE</span>
           </button>
-          <button className="px-4 h-10 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10 group">
+          <button className="px-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-3 h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-9 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10 group">
             <div className="w-2.5 h-2.5 bg-[#FF3B30] rounded-full shadow-[0_0_10px_#FF3B30] group-hover:scale-110 transition-transform" />
           </button>
           <button 
