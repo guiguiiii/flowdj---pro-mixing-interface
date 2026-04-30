@@ -1,34 +1,33 @@
-import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { getSyncedPlaybackRate } from './sync.js';
+import { getSyncPressAction, getSyncedPlaybackRate } from './sync.js';
 
-test('getSyncedPlaybackRate matches the source deck bpm when source is playing', () => {
-  const playbackRate = getSyncedPlaybackRate({
-    sourceIsPlaying: true,
-    sourceBpm: 128,
-    targetBaseBpm: 120,
-  });
+assert.equal(
+  getSyncedPlaybackRate({ sourceBpm: 128, targetBaseBpm: 100 }),
+  1.28,
+  'sync should derive the target playback rate from the opposite deck effective BPM',
+);
 
-  assert.equal(playbackRate, 1.067);
-});
+assert.equal(
+  getSyncedPlaybackRate({ sourceBpm: 96, targetBaseBpm: 120 }),
+  0.8,
+  'sync should support slowing the target deck down to match the source deck BPM',
+);
 
-test('getSyncedPlaybackRate leaves the target unchanged when source is not playing', () => {
-  const playbackRate = getSyncedPlaybackRate({
-    sourceIsPlaying: false,
-    sourceBpm: 128,
-    targetBaseBpm: 120,
-  });
+assert.equal(
+  getSyncedPlaybackRate({ sourceBpm: 128, targetBaseBpm: 0 }),
+  null,
+  'sync should ignore invalid target BPM values',
+);
 
-  assert.equal(playbackRate, null);
-});
+assert.equal(
+  getSyncPressAction({ durationMs: 499 }),
+  'sync',
+  'releasing before the threshold should trigger bpm sync',
+);
 
-test('getSyncedPlaybackRate clamps invalid target bpm values', () => {
-  const playbackRate = getSyncedPlaybackRate({
-    sourceIsPlaying: true,
-    sourceBpm: 128,
-    targetBaseBpm: 0,
-  });
-
-  assert.equal(playbackRate, null);
-});
+assert.equal(
+  getSyncPressAction({ durationMs: 500 }),
+  'restore',
+  'holding at least the threshold should restore the original bpm',
+);

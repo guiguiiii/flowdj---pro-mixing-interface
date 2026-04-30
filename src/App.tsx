@@ -53,7 +53,7 @@ import {
   shapeWaveformForDisplay,
 } from './waveform.js';
 import { getDeckMixGains } from './mixer.js';
-import { getSyncedPlaybackRate } from './sync.js';
+import { getSyncPressAction, getSyncedPlaybackRate, SYNC_LONG_PRESS_MS } from './sync.js';
 import {
   getCrossfaderHandleLeft,
   getCrossfaderValueFromPointer,
@@ -831,6 +831,10 @@ export default function App() {
   const [playbackRateB, setPlaybackRateB] = useState(1);
   const audioRefA = useRef<HTMLAudioElement>(null);
   const audioRefB = useRef<HTMLAudioElement>(null);
+  const syncPressTimeoutRef = useRef<{ A: number | null; B: number | null }>({ A: null, B: null });
+  const syncPressStartedAtRef = useRef<{ A: number; B: number }>({ A: 0, B: 0 });
+  const syncLongPressTriggeredRef = useRef<{ A: boolean; B: boolean }>({ A: false, B: false });
+  const syncSuppressClickRef = useRef<{ A: boolean; B: boolean }>({ A: false, B: false });
   const crossfaderRef = useRef<HTMLDivElement>(null);
   const crossfaderHandleRef = useRef<HTMLDivElement>(null);
   const [isCrossfaderDragging, setIsCrossfaderDragging] = useState(false);
@@ -1137,6 +1141,19 @@ export default function App() {
     }
   }, [playbackRateB, trackBId]);
 
+  useEffect(() => () => {
+    const timeoutA = syncPressTimeoutRef.current.A;
+    const timeoutB = syncPressTimeoutRef.current.B;
+
+    if (timeoutA != null) {
+      window.clearTimeout(timeoutA);
+    }
+
+    if (timeoutB != null) {
+      window.clearTimeout(timeoutB);
+    }
+  }, []);
+
   const toggleDeckPlayback = async (deck: 'A' | 'B') => {
     const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
 
@@ -1208,6 +1225,80 @@ export default function App() {
     } else {
       setPlaybackRateB(nextPlaybackRate);
     }
+  };
+
+  const restoreDeckBpm = (deck: 'A' | 'B') => {
+    const track = deck === 'A' ? trackA : trackB;
+
+    if (track == null) {
+      return;
+    }
+
+    if (deck === 'A') {
+      setPlaybackRateA(1);
+    } else {
+      setPlaybackRateB(1);
+    }
+  };
+
+  const clearSyncPressTimeout = (deck: 'A' | 'B') => {
+    const timeoutId = syncPressTimeoutRef.current[deck];
+
+    if (timeoutId != null) {
+      window.clearTimeout(timeoutId);
+      syncPressTimeoutRef.current[deck] = null;
+    }
+  };
+
+  const cancelSyncPress = (deck: 'A' | 'B') => {
+    clearSyncPressTimeout(deck);
+    syncPressStartedAtRef.current[deck] = 0;
+    syncLongPressTriggeredRef.current[deck] = false;
+  };
+
+  const handleSyncPointerDown = (deck: 'A' | 'B') => {
+    clearSyncPressTimeout(deck);
+    syncPressStartedAtRef.current[deck] = Date.now();
+    syncLongPressTriggeredRef.current[deck] = false;
+    syncSuppressClickRef.current[deck] = false;
+
+    syncPressTimeoutRef.current[deck] = window.setTimeout(() => {
+      syncPressTimeoutRef.current[deck] = null;
+      syncLongPressTriggeredRef.current[deck] = true;
+      syncSuppressClickRef.current[deck] = true;
+      restoreDeckBpm(deck);
+    }, SYNC_LONG_PRESS_MS);
+  };
+
+  const handleSyncPointerUp = (deck: 'A' | 'B') => {
+    const startedAt = syncPressStartedAtRef.current[deck];
+
+    if (startedAt === 0) {
+      return;
+    }
+
+    const durationMs = Date.now() - startedAt;
+    const action = getSyncPressAction({ durationMs });
+
+    clearSyncPressTimeout(deck);
+    syncPressStartedAtRef.current[deck] = 0;
+    syncSuppressClickRef.current[deck] = true;
+
+    if (action === 'restore' || syncLongPressTriggeredRef.current[deck]) {
+      syncLongPressTriggeredRef.current[deck] = false;
+      return;
+    }
+
+    syncDeckToOther(deck);
+  };
+
+  const handleSyncClick = (deck: 'A' | 'B') => {
+    if (syncSuppressClickRef.current[deck]) {
+      syncSuppressClickRef.current[deck] = false;
+      return;
+    }
+
+    syncDeckToOther(deck);
   };
 
   const updateCrossfaderFromPointer = (clientX: number) => {
@@ -1656,7 +1747,17 @@ export default function App() {
         {/* Pitch A with Integrated Sync */}
         <div className="opz-panel p-2 md:p-2.5 xl:p-3 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex flex-col items-center justify-between gap-1.5 md:gap-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1 min-w-0 border-r border-black/5" style={{ backgroundColor: '#ADADAD' }}>
           <div className="w-full max-w-[72px] md:max-w-[78px] xl:max-w-[86px] flex flex-col items-center gap-1.5 md:gap-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1">
-          <button onClick={() => syncDeckToOther('A')} className="w-full py-1 md:py-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-xl neu-button text-[10px] xl:text-[11px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold uppercase text-deck-a shrink-0 tracking-[0.14em]">Sync</button>
+          <button
+            type="button"
+            onClick={() => handleSyncClick('A')}
+            onPointerDown={() => handleSyncPointerDown('A')}
+            onPointerUp={() => handleSyncPointerUp('A')}
+            onPointerLeave={() => cancelSyncPress('A')}
+            onPointerCancel={() => cancelSyncPress('A')}
+            className="w-full py-1 md:py-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-xl neu-button text-[10px] xl:text-[11px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold uppercase text-deck-a shrink-0 tracking-[0.14em]"
+          >
+            Sync
+          </button>
           <div className="flex flex-col items-center leading-none shrink-0">
             <div className="text-[14px] md:text-[15px] xl:text-[16px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[12px] font-mono font-bold text-black/80">{effectiveBpmA.toFixed(1)}</div>
             <div className="text-[9px] md:text-[9.5px] xl:text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-mono font-semibold text-black/35">{pitchPercentA.toFixed(1)}%</div>
@@ -1968,7 +2069,17 @@ export default function App() {
         {/* Pitch B with Integrated Sync */}
         <div className="opz-panel p-2 md:p-2.5 xl:p-3 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex flex-col items-center justify-between gap-1.5 md:gap-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1 min-w-0 border-l border-black/5" style={{ backgroundColor: '#ADADAD' }}>
           <div className="w-full max-w-[72px] md:max-w-[78px] xl:max-w-[86px] flex flex-col items-center gap-1.5 md:gap-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1">
-          <button onClick={() => syncDeckToOther('B')} className="w-full py-1 md:py-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-xl neu-button text-[10px] xl:text-[11px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold uppercase text-deck-b shrink-0 tracking-[0.14em]">Sync</button>
+          <button
+            type="button"
+            onClick={() => handleSyncClick('B')}
+            onPointerDown={() => handleSyncPointerDown('B')}
+            onPointerUp={() => handleSyncPointerUp('B')}
+            onPointerLeave={() => cancelSyncPress('B')}
+            onPointerCancel={() => cancelSyncPress('B')}
+            className="w-full py-1 md:py-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-xl neu-button text-[10px] xl:text-[11px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold uppercase text-deck-b shrink-0 tracking-[0.14em]"
+          >
+            Sync
+          </button>
           <div className="flex flex-col items-center leading-none shrink-0">
             <div className="text-[14px] md:text-[15px] xl:text-[16px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[12px] font-mono font-bold text-black/80">{effectiveBpmB.toFixed(1)}</div>
             <div className="text-[9px] md:text-[9.5px] xl:text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-mono font-semibold text-black/35">{pitchPercentB.toFixed(1)}%</div>
