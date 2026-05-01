@@ -850,9 +850,9 @@ export default function App() {
 
   // Mixer & FX States
   const [mixerA, setMixerA] = useState({ hi: 50, mid: 50, low: 50 });
-  const [fxA, setFxA] = useState({ filter: 50, echo: 30, reverb: 60 });
+  const [fxA, setFxA] = useState({ filter: 50, echo: 50, reverb: 50 });
   const [mixerB, setMixerB] = useState({ hi: 50, mid: 50, low: 50 });
-  const [fxB, setFxB] = useState({ filter: 50, echo: 40, reverb: 20 });
+  const [fxB, setFxB] = useState({ filter: 50, echo: 50, reverb: 50 });
   const [levelA, setLevelA] = useState(80);
   const [levelB, setLevelB] = useState(80);
   const [cueLevelA, setCueLevelA] = useState(80);
