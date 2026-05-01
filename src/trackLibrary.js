@@ -45,4 +45,20 @@ export const TRACK_LIBRARY = [
     key: '8A',
     src: '/audio/i-might-be-late.mp3',
   }),
+  createLibraryTrack({
+    id: 'our',
+    title: 'OUR',
+    artist: 'Local Track',
+    bpm: 120,
+    key: '8A',
+    src: '/audio/our.mp3',
+  }),
+  createLibraryTrack({
+    id: 'ill-see-you-there-tomorrow',
+    title: "I'll See You There Tomorrow",
+    artist: 'Local Track',
+    bpm: 120,
+    key: '8A',
+    src: '/audio/ill-see-you-there-tomorrow.mp3',
+  }),
 ];
