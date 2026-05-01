@@ -2010,50 +2010,58 @@ export default function App() {
                 </div>
               </div>
             )}
-            {padModeA === 'padFx' && padFxButtonsA.map((pad) => (
-              <button
-                key={pad.id}
-                onPointerDown={() => setActivePadFxA(pad.id)}
-                onPointerUp={() => setActivePadFxA(null)}
-                onPointerLeave={() => setActivePadFxA(null)}
-                onPointerCancel={() => setActivePadFxA(null)}
-                className="rounded-xl min-h-0 border-2 p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
-                style={{
-                  backgroundColor: activePadFxA === pad.id ? '#DADADA' : '#D0D0D0',
-                  borderColor: pad.accent,
-                  boxShadow: activePadFxA === pad.id
-                    ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${pad.accent}, 0 0 16px ${pad.accent}55, 0 0 24px ${pad.accent}33`
-                    : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
-                  transform: activePadFxA === pad.id ? 'translateY(1px)' : 'translateY(0)',
-                }}
-              >
-                <div className="flex-1" />
-                <div className="leading-none space-y-1">
-                  <div className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-bold uppercase tracking-[0.12em]" style={{ color: pad.accent }}>{pad.label}</div>
-                  <div className="text-[16px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[13px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{pad.value}</div>
-                </div>
-              </button>
-            ))}
-            {padModeA === 'sample' && sampleButtonsA.map((sample) => (
-              <button
-                key={sample.id}
-                onPointerDown={() => setActiveSampleA(sample.id)}
-                onPointerUp={() => setActiveSampleA(null)}
-                onPointerLeave={() => setActiveSampleA(null)}
-                onPointerCancel={() => setActiveSampleA(null)}
-                className="rounded-xl min-h-0 border-2 p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
-                style={{
-                  backgroundColor: activeSampleA === sample.id ? '#DADADA' : '#D0D0D0',
-                  borderColor: sample.accent,
-                  boxShadow: activeSampleA === sample.id
-                    ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${sample.accent}, 0 0 16px ${sample.accent}55, 0 0 24px ${sample.accent}33`
-                    : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
-                  transform: activeSampleA === sample.id ? 'translateY(1px)' : 'translateY(0)',
-                }}
-              >
-                <span className="text-[12px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
-              </button>
-            ))}
+            {padModeA === 'padFx' && (
+              <div className="grid grid-cols-4 gap-0.5 md:gap-1 min-h-0 h-full">
+                {padFxButtonsA.map((pad) => (
+                  <button
+                    key={pad.id}
+                    onPointerDown={() => setActivePadFxA(pad.id)}
+                    onPointerUp={() => setActivePadFxA(null)}
+                    onPointerLeave={() => setActivePadFxA(null)}
+                    onPointerCancel={() => setActivePadFxA(null)}
+                    className="rounded-xl min-h-0 border-2 p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                    style={{
+                      backgroundColor: activePadFxA === pad.id ? '#DADADA' : '#D0D0D0',
+                      borderColor: pad.accent,
+                      boxShadow: activePadFxA === pad.id
+                        ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${pad.accent}, 0 0 16px ${pad.accent}55, 0 0 24px ${pad.accent}33`
+                        : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
+                      transform: activePadFxA === pad.id ? 'translateY(1px)' : 'translateY(0)',
+                    }}
+                  >
+                    <div className="flex-1" />
+                    <div className="leading-none space-y-1">
+                      <div className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-bold uppercase tracking-[0.12em]" style={{ color: pad.accent }}>{pad.label}</div>
+                      <div className="text-[16px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[13px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{pad.value}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {padModeA === 'sample' && (
+              <div className="grid grid-cols-4 gap-0.5 md:gap-1 min-h-0 h-full">
+                {sampleButtonsA.map((sample) => (
+                  <button
+                    key={sample.id}
+                    onPointerDown={() => setActiveSampleA(sample.id)}
+                    onPointerUp={() => setActiveSampleA(null)}
+                    onPointerLeave={() => setActiveSampleA(null)}
+                    onPointerCancel={() => setActiveSampleA(null)}
+                    className="rounded-xl min-h-0 border-2 p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                    style={{
+                      backgroundColor: activeSampleA === sample.id ? '#DADADA' : '#D0D0D0',
+                      borderColor: sample.accent,
+                      boxShadow: activeSampleA === sample.id
+                        ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${sample.accent}, 0 0 16px ${sample.accent}55, 0 0 24px ${sample.accent}33`
+                        : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
+                      transform: activeSampleA === sample.id ? 'translateY(1px)' : 'translateY(0)',
+                    }}
+                  >
+                    <span className="text-[12px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
@@ -2189,50 +2197,58 @@ export default function App() {
                 </div>
               </div>
             )}
-            {padModeB === 'padFx' && padFxButtonsB.map((pad) => (
-              <button
-                key={pad.id}
-                onPointerDown={() => setActivePadFxB(pad.id)}
-                onPointerUp={() => setActivePadFxB(null)}
-                onPointerLeave={() => setActivePadFxB(null)}
-                onPointerCancel={() => setActivePadFxB(null)}
-                className="rounded-xl min-h-0 border-2 p-2 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
-                style={{
-                  backgroundColor: activePadFxB === pad.id ? '#DADADA' : '#D0D0D0',
-                  borderColor: pad.accent,
-                  boxShadow: activePadFxB === pad.id
-                    ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${pad.accent}, 0 0 16px ${pad.accent}55, 0 0 24px ${pad.accent}33`
-                    : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
-                  transform: activePadFxB === pad.id ? 'translateY(1px)' : 'translateY(0)',
-                }}
-              >
-                <div className="flex-1" />
-                <div className="leading-none space-y-1">
-                  <div className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: pad.accent }}>{pad.label}</div>
-                  <div className="text-[16px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{pad.value}</div>
-                </div>
-              </button>
-            ))}
-            {padModeB === 'sample' && sampleButtonsB.map((sample) => (
-              <button
-                key={sample.id}
-                onPointerDown={() => setActiveSampleB(sample.id)}
-                onPointerUp={() => setActiveSampleB(null)}
-                onPointerLeave={() => setActiveSampleB(null)}
-                onPointerCancel={() => setActiveSampleB(null)}
-                className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
-                style={{
-                  backgroundColor: activeSampleB === sample.id ? '#DADADA' : '#D0D0D0',
-                  borderColor: sample.accent,
-                  boxShadow: activeSampleB === sample.id
-                    ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${sample.accent}, 0 0 16px ${sample.accent}55, 0 0 24px ${sample.accent}33`
-                    : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
-                  transform: activeSampleB === sample.id ? 'translateY(1px)' : 'translateY(0)',
-                }}
-              >
-                <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
-              </button>
-            ))}
+            {padModeB === 'padFx' && (
+              <div className="grid grid-cols-4 gap-0.5 md:gap-1 min-h-0 h-full">
+                {padFxButtonsB.map((pad) => (
+                  <button
+                    key={pad.id}
+                    onPointerDown={() => setActivePadFxB(pad.id)}
+                    onPointerUp={() => setActivePadFxB(null)}
+                    onPointerLeave={() => setActivePadFxB(null)}
+                    onPointerCancel={() => setActivePadFxB(null)}
+                    className="rounded-xl min-h-0 border-2 p-2 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                    style={{
+                      backgroundColor: activePadFxB === pad.id ? '#DADADA' : '#D0D0D0',
+                      borderColor: pad.accent,
+                      boxShadow: activePadFxB === pad.id
+                        ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${pad.accent}, 0 0 16px ${pad.accent}55, 0 0 24px ${pad.accent}33`
+                        : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
+                      transform: activePadFxB === pad.id ? 'translateY(1px)' : 'translateY(0)',
+                    }}
+                  >
+                    <div className="flex-1" />
+                    <div className="leading-none space-y-1">
+                      <div className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: pad.accent }}>{pad.label}</div>
+                      <div className="text-[16px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{pad.value}</div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+            {padModeB === 'sample' && (
+              <div className="grid grid-cols-4 gap-0.5 md:gap-1 min-h-0 h-full">
+                {sampleButtonsB.map((sample) => (
+                  <button
+                    key={sample.id}
+                    onPointerDown={() => setActiveSampleB(sample.id)}
+                    onPointerUp={() => setActiveSampleB(null)}
+                    onPointerLeave={() => setActiveSampleB(null)}
+                    onPointerCancel={() => setActiveSampleB(null)}
+                    className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
+                    style={{
+                      backgroundColor: activeSampleB === sample.id ? '#DADADA' : '#D0D0D0',
+                      borderColor: sample.accent,
+                      boxShadow: activeSampleB === sample.id
+                        ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${sample.accent}, 0 0 16px ${sample.accent}55, 0 0 24px ${sample.accent}33`
+                        : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
+                      transform: activeSampleB === sample.id ? 'translateY(1px)' : 'translateY(0)',
+                    }}
+                  >
+                    <span className="text-[12px] font-bold uppercase tracking-[0.14em]" style={{ color: sample.accent }}>{sample.label}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 
