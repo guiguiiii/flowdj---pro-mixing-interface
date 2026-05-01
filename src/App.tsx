@@ -56,6 +56,11 @@ import {
   createHotCueBanks,
   getHotCuePadAction,
 } from './hotCue.js';
+import {
+  clampJogTime,
+  getPointerAngleDegrees,
+  getShortestAngleDelta,
+} from './jogWheel.js';
 import { findTrackById, updateTrackInLibrary } from './library.js';
 import {
   createDeckVolumeGroups,
@@ -117,7 +122,6 @@ const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: n
 
 const transportPlayButtonClassName =
   "w-14 h-10 rounded-[12px] flex items-center justify-center border border-white/10 bg-[#D0D0D0] shadow-[-2px_-2px_4px_rgba(78,78,78,0.12),2px_2px_4px_rgba(42,42,42,0.35)] transition-transform duration-150 hover:scale-[1.02] active:scale-95 active:shadow-[inset_-2px_-2px_4px_rgba(78,78,78,0.12),inset_2px_2px_4px_rgba(42,42,42,0.3)]";
-const orbitSpinClassName = 'motion-safe:animate-[spin_2s_linear_infinite]';
 const defaultDeckAudioState = { currentTime: 0, duration: 0, error: null as string | null };
 const transportSecondaryButtonClassName =
   "px-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-3 h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-8 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 border border-white/10";
@@ -723,20 +727,34 @@ const DeckDisplay = ({
   color,
   active,
   bpm,
+  tempoPercent,
+  jogRotationDeg,
   time,
   duration,
   progress,
   title,
   artist,
+  isJogDragging = false,
+  onJogPointerDown,
+  onJogPointerMove,
+  onJogPointerUp,
+  onJogPointerCancel,
 }: {
   color: string,
   active: boolean,
   bpm: number,
+  tempoPercent: number,
+  jogRotationDeg: number,
   time: string,
   duration: string,
   progress: number,
   title: string,
   artist: string,
+  isJogDragging?: boolean,
+  onJogPointerDown?: React.PointerEventHandler<HTMLDivElement>,
+  onJogPointerMove?: React.PointerEventHandler<HTMLDivElement>,
+  onJogPointerUp?: React.PointerEventHandler<HTMLDivElement>,
+  onJogPointerCancel?: React.PointerEventHandler<HTMLDivElement>,
 }) => {
   const orbitSize = 'clamp(172px, 21vw, 214px)';
   const orbitDotSize = 'clamp(14px, 1.8vw, 18px)';
@@ -746,30 +764,44 @@ const DeckDisplay = ({
   return (
     <div className="flex flex-col items-center justify-center gap-1 w-full h-full relative p-1 min-w-0">
       {/* Circular Data Meter - Enlarged by another 20% while keeping container height fixed */}
-      <div className="relative w-[150px] h-[150px] md:w-[165px] md:h-[165px] xl:w-[185px] xl:h-[185px] rounded-full neu-convex border-[5px] xl:border-[6px] border-[#D1D1D1] flex flex-col items-center justify-center shadow-xl overflow-visible shrink-0">
+      <div
+        data-jog-wheel
+        className={`relative w-[150px] h-[150px] md:w-[165px] md:h-[165px] xl:w-[185px] xl:h-[185px] rounded-full neu-convex border-[5px] xl:border-[6px] border-[#D1D1D1] flex flex-col items-center justify-center shadow-xl overflow-visible shrink-0 select-none touch-none ${isJogDragging ? 'cursor-grabbing shadow-[inset_0_0_16px_rgba(255,148,87,0.18),0_10px_28px_rgba(0,0,0,0.22)]' : 'cursor-grab'}`}
+        style={{ touchAction: 'none' }}
+        onPointerDown={onJogPointerDown}
+        onPointerMove={onJogPointerMove}
+        onPointerUp={onJogPointerUp}
+        onPointerCancel={onJogPointerCancel}
+      >
       {/* Outer Orbit Track & Moving Dot */}
       <div
-        className="absolute pointer-events-none left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
+        className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2"
         style={{ width: orbitSize, height: orbitSize }}
       >
         <div className="absolute inset-0 rounded-full border-[2px]" style={{ borderColor: 'rgba(138, 138, 138, 0.5)' }} />
         <div
-          className={`absolute inset-0 ${active ? orbitSpinClassName : ''}`}
-          style={{ transformOrigin: '50% 50%' }}
+          className="absolute inset-0"
+          style={{ transform: `rotate(${jogRotationDeg + orbitStartAngle}deg)`, transformOrigin: '50% 50%' }}
         >
-          <div
-            className="absolute inset-0"
-            style={{ transform: `rotate(${orbitStartAngle}deg)`, transformOrigin: '50% 50%' }}
-          >
+          <div className="absolute inset-0">
             <div
-              className="absolute rounded-full left-1/2 top-0 -translate-x-1/2 -translate-y-1/2"
-              style={{
-                width: orbitDotSize,
-                height: orbitDotSize,
-                backgroundColor: color,
-                boxShadow: `0 0 10px ${color}`,
-              }}
-            />
+              className="absolute left-1/2 top-0 -translate-x-1/2 -translate-y-1/2 pointer-events-none"
+            >
+              <div className="relative h-10 w-10">
+                <div
+                  className="absolute left-1/2 top-1/2 rounded-full -translate-x-1/2 -translate-y-1/2 transition-all duration-100"
+                  style={{
+                    width: orbitDotSize,
+                    height: orbitDotSize,
+                    backgroundColor: color,
+                    boxShadow: isJogDragging ? `0 0 18px ${color}, 0 0 26px ${color}88` : `0 0 10px ${color}`,
+                    scale: `${isJogDragging ? 1.18 : 1}`,
+                    left: '50%',
+                    top: '50%',
+                  }}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -782,7 +814,7 @@ const DeckDisplay = ({
       
       {/* Bottom Info Row (BPM Label, Pitch, Range) */}
       <div className="relative w-full flex items-center justify-center px-4 md:px-5 xl:px-6 mb-1 xl:mb-2">
-        <div className="absolute left-2 md:left-3 text-[10px] md:text-[11px] xl:text-[12px] font-mono font-bold text-black/50">+0.0%</div>
+        <div className="absolute left-2 md:left-3 text-[10px] md:text-[11px] xl:text-[12px] font-mono font-bold text-black/50">{`${tempoPercent > 0 ? '+' : ''}${tempoPercent.toFixed(1)}%`}</div>
         <div className="text-[11px] md:text-[12px] xl:text-[12px] font-bold uppercase tracking-[0.1em] text-black/40">BPM</div>
         <div className="absolute right-2 md:right-3 flex items-center gap-0.5 px-1 rounded bg-black/5 border border-black/10">
           <span className="text-[7px] font-bold text-black/40">±</span>
@@ -944,6 +976,18 @@ export default function App() {
     startY: number,
     startTime: number,
   }>({ deck: null, pointerId: null, startY: 0, startTime: 0 });
+  const jogDotDragRef = useRef<{
+    deck: 'A' | 'B' | null,
+    pointerId: number | null,
+    lastAngleDeg: number,
+    wasPlaying: boolean,
+  }>({ deck: null, pointerId: null, lastAngleDeg: 0, wasPlaying: false });
+  const jogRotationFrameRef = useRef<{ A: number | null; B: number | null }>({ A: null, B: null });
+  const jogRotationTimestampRef = useRef<{ A: number | null; B: number | null }>({ A: null, B: null });
+  const [jogRotationA, setJogRotationA] = useState(0);
+  const [jogRotationB, setJogRotationB] = useState(0);
+  const [isJogDotDraggingA, setIsJogDotDraggingA] = useState(false);
+  const [isJogDotDraggingB, setIsJogDotDraggingB] = useState(false);
   const [isCrossfaderDragging, setIsCrossfaderDragging] = useState(false);
   const [crossfaderMetrics, setCrossfaderMetrics] = useState({ trackWidth: 0, handleWidth: 0 });
   const analyzedTrackIdsRef = useRef(new Set(Object.keys(getInitialAnalysisCache())));
@@ -1366,6 +1410,57 @@ export default function App() {
     }
   }, [playbackRateB, trackBId]);
 
+  useEffect(() => {
+    const cancelDeckFrame = (deck: 'A' | 'B') => {
+      const frameId = jogRotationFrameRef.current[deck];
+
+      if (frameId != null) {
+        window.cancelAnimationFrame(frameId);
+        jogRotationFrameRef.current[deck] = null;
+      }
+
+      jogRotationTimestampRef.current[deck] = null;
+    };
+
+    const startDeckFrame = (
+      deck: 'A' | 'B',
+      playbackRate: number,
+      setRotation: React.Dispatch<React.SetStateAction<number>>,
+    ) => {
+      const tick = (timestamp: number) => {
+        const previousTimestamp = jogRotationTimestampRef.current[deck] ?? timestamp;
+        const deltaSeconds = (timestamp - previousTimestamp) / 1000;
+        jogRotationTimestampRef.current[deck] = timestamp;
+
+        setRotation((prev) => (prev + deltaSeconds * 180 * playbackRate) % 360);
+        jogRotationFrameRef.current[deck] = window.requestAnimationFrame(tick);
+      };
+
+      jogRotationFrameRef.current[deck] = window.requestAnimationFrame(tick);
+    };
+
+    if (typeof window === 'undefined') {
+      return undefined;
+    }
+
+    if (isPlayingA && !isJogDotDraggingA) {
+      startDeckFrame('A', playbackRateA, setJogRotationA);
+    } else {
+      cancelDeckFrame('A');
+    }
+
+    if (isPlayingB && !isJogDotDraggingB) {
+      startDeckFrame('B', playbackRateB, setJogRotationB);
+    } else {
+      cancelDeckFrame('B');
+    }
+
+    return () => {
+      cancelDeckFrame('A');
+      cancelDeckFrame('B');
+    };
+  }, [isPlayingA, isPlayingB, isJogDotDraggingA, isJogDotDraggingB, playbackRateA, playbackRateB]);
+
   useEffect(() => () => {
     const timeoutA = syncPressTimeoutRef.current.A;
     const timeoutB = syncPressTimeoutRef.current.B;
@@ -1482,10 +1577,11 @@ export default function App() {
       return;
     }
 
-    audio.currentTime = nextTime;
+    const clampedTime = clampJogTime(nextTime, duration);
+    audio.currentTime = clampedTime;
     setAudioState((prev) => ({
       ...prev,
-      currentTime: nextTime,
+      currentTime: clampedTime,
       duration: Number.isFinite(duration) ? duration : prev.duration,
     }));
   };
@@ -1529,6 +1625,116 @@ export default function App() {
     });
 
     updateDeckPlaybackTime(deck, nextTime);
+  };
+
+  const getPointerAngleForJogWheel = (
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    const orbitBounds = event.currentTarget.getBoundingClientRect();
+
+    if (!orbitBounds) {
+      return null;
+    }
+
+    return getPointerAngleDegrees({
+      centerX: orbitBounds.left + orbitBounds.width / 2,
+      centerY: orbitBounds.top + orbitBounds.height / 2,
+      pointerX: event.clientX,
+      pointerY: event.clientY,
+    });
+  };
+
+  const handleJogWheelPointerDown = (
+    deck: 'A' | 'B',
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const duration = getDeckDuration(deck);
+    const startAngleDeg = getPointerAngleForJogWheel(event);
+
+    if (!audio || !Number.isFinite(duration) || duration <= 0 || startAngleDeg == null) {
+      return;
+    }
+
+    const wasPlaying = !audio.paused;
+
+    jogDotDragRef.current = {
+      deck,
+      pointerId: event.pointerId,
+      lastAngleDeg: startAngleDeg,
+      wasPlaying,
+    };
+
+    if (deck === 'A') {
+      setIsJogDotDraggingA(true);
+    } else {
+      setIsJogDotDraggingB(true);
+    }
+
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleJogWheelPointerMove = (
+    deck: 'A' | 'B',
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (
+      jogDotDragRef.current.deck !== deck ||
+      jogDotDragRef.current.pointerId !== event.pointerId
+    ) {
+      return;
+    }
+
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const duration = getDeckDuration(deck);
+    const nextAngleDeg = getPointerAngleForJogWheel(event);
+
+    if (!audio || !Number.isFinite(duration) || duration <= 0 || nextAngleDeg == null) {
+      return;
+    }
+
+    const deltaAngle = getShortestAngleDelta(jogDotDragRef.current.lastAngleDeg, nextAngleDeg);
+    const setJogRotation = deck === 'A' ? setJogRotationA : setJogRotationB;
+
+    setJogRotation((prev) => (prev + deltaAngle + 360) % 360);
+    updateDeckPlaybackTime(deck, audio.currentTime + deltaAngle * 0.01);
+    jogDotDragRef.current.lastAngleDeg = nextAngleDeg;
+  };
+
+  const handleJogWheelPointerEnd = (
+    deck: 'A' | 'B',
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (
+      jogDotDragRef.current.deck !== deck ||
+      jogDotDragRef.current.pointerId !== event.pointerId
+    ) {
+      return;
+    }
+
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const wasPlaying = jogDotDragRef.current.wasPlaying;
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    jogDotDragRef.current = {
+      deck: null,
+      pointerId: null,
+      lastAngleDeg: 0,
+      wasPlaying: false,
+    };
+
+    if (deck === 'A') {
+      setIsJogDotDraggingA(false);
+    } else {
+      setIsJogDotDraggingB(false);
+    }
+
+    if (wasPlaying && audio?.paused) {
+      void audio.play().catch(() => {});
+    }
   };
 
   const handleHorizontalWaveformPointerDown = (
@@ -2226,7 +2432,7 @@ export default function App() {
               </div>
             )}
             {modeA === 'FX' && (
-              <div className="flex flex-col items-center justify-center gap-[clamp(14px,2.8vh,30px)] py-[clamp(6px,1.6vh,18px)] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0">
+              <div className="w-full flex-1 min-h-0 box-border flex flex-col items-center justify-evenly gap-[clamp(4px,1.2vh,14px)] py-[clamp(8px,1.8vh,16px)] [@media(max-height:760px)]:gap-[clamp(2px,0.8vh,8px)] [@media(max-height:760px)]:py-[clamp(6px,1.1vh,10px)] [@media(max-height:760px)]:scale-[0.96] [@media(max-height:760px)]:origin-center [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:scale-[0.94]">
                 <Knob 
                   label="Filter" color={orange} value={fxValueToKnobValue(fxA.filter)} valueLabel={`${Math.round(fxA.filter * 100)}%`} variant="gear" 
                   onChange={(val) => handleFxKnobChange('A', 'filter', val)} 
@@ -2274,11 +2480,18 @@ export default function App() {
             color={orange} 
             active={isPlayingA} 
             bpm={effectiveBpmA} 
+            tempoPercent={pitchPercentA}
+            jogRotationDeg={jogRotationA}
             time={currentTimeA}
             duration={totalDurationA}
             progress={progressA}
             title={trackA?.title || ""} 
             artist={trackA?.artist || ""} 
+            isJogDragging={isJogDotDraggingA}
+            onJogPointerDown={(event) => handleJogWheelPointerDown('A', event)}
+            onJogPointerMove={(event) => handleJogWheelPointerMove('A', event)}
+            onJogPointerUp={(event) => handleJogWheelPointerEnd('A', event)}
+            onJogPointerCancel={(event) => handleJogWheelPointerEnd('A', event)}
           />
         </div>
 
@@ -2312,11 +2525,18 @@ export default function App() {
             color={blue} 
             active={isPlayingB} 
             bpm={effectiveBpmB} 
+            tempoPercent={pitchPercentB}
+            jogRotationDeg={jogRotationB}
             time={currentTimeB}
             duration={totalDurationB}
             progress={progressB}
             title={trackB?.title || ""} 
             artist={trackB?.artist || ""} 
+            isJogDragging={isJogDotDraggingB}
+            onJogPointerDown={(event) => handleJogWheelPointerDown('B', event)}
+            onJogPointerMove={(event) => handleJogWheelPointerMove('B', event)}
+            onJogPointerUp={(event) => handleJogWheelPointerEnd('B', event)}
+            onJogPointerCancel={(event) => handleJogWheelPointerEnd('B', event)}
           />
         </div>
 
@@ -2363,7 +2583,7 @@ export default function App() {
               </div>
             )}
             {modeB === 'FX' && (
-              <div className="flex flex-col items-center justify-center gap-[clamp(14px,2.8vh,30px)] py-[clamp(6px,1.6vh,18px)] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0">
+              <div className="w-full flex-1 min-h-0 box-border flex flex-col items-center justify-evenly gap-[clamp(4px,1.2vh,14px)] py-[clamp(8px,1.8vh,16px)] [@media(max-height:760px)]:gap-[clamp(2px,0.8vh,8px)] [@media(max-height:760px)]:py-[clamp(6px,1.1vh,10px)] [@media(max-height:760px)]:scale-[0.96] [@media(max-height:760px)]:origin-center [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-height:900px)]:scale-[0.94]">
                 <Knob 
                   label="Filter" color={blue} value={fxValueToKnobValue(fxB.filter)} valueLabel={`${Math.round(fxB.filter * 100)}%`} variant="gear" 
                   onChange={(val) => handleFxKnobChange('B', 'filter', val)} 
