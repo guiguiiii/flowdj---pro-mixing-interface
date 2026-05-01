@@ -15,8 +15,8 @@ assert.deepEqual(
 );
 
 assert.ok(
-  getSampleById('kick')?.src.includes('/@fs/Users/shu/Desktop/'),
-  'sample lookup should return a Vite filesystem-backed source path',
+  getSampleById('kick')?.src === '/samples/kick.wav',
+  'sample lookup should return a production-safe public asset path',
 );
 
 assert.equal(
