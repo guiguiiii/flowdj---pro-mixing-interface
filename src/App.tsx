@@ -88,6 +88,12 @@ import {
   getScrubbedTimeFromVerticalDrag,
   getSeekTimeFromHorizontalPointer,
 } from './waveformScrub.js';
+import {
+  createLocalTrack,
+  getFileSignature,
+  isSupportedAudioFile,
+  mergeImportedTracks,
+} from './localTracks.js';
 import { getDeckMixGains } from './mixer.js';
 import { getSyncPressAction, getSyncedPlaybackRate, SYNC_LONG_PRESS_MS } from './sync.js';
 import {
@@ -872,14 +878,18 @@ const MusicLibraryModal = ({
   isOpen,
   tracks,
   currentTrackId,
+  importError,
   onClose,
+  onAddTracks,
   onSelectTrack,
 }: {
   deck: 'A' | 'B' | null;
   isOpen: boolean;
   tracks: Track[];
   currentTrackId: string | null;
+  importError: string | null;
   onClose: () => void;
+  onAddTracks: () => void;
   onSelectTrack: (trackId: string) => void;
 }) => {
   if (!isOpen || !deck) return null;
@@ -892,13 +902,26 @@ const MusicLibraryModal = ({
             <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">Deck {deck}</div>
             <h2 className="text-white text-lg font-semibold">Music Library</h2>
           </div>
-          <button
-            onClick={onClose}
-            className="px-3 py-1.5 rounded-full bg-white/8 text-white/75 text-xs font-bold uppercase tracking-[0.18em] hover:bg-white/12"
-          >
-            Close
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={onAddTracks}
+              className="px-3 py-1.5 rounded-full bg-[#4b8dff] text-white text-xs font-bold uppercase tracking-[0.18em] hover:bg-[#5b97ff]"
+            >
+              Add Track
+            </button>
+            <button
+              onClick={onClose}
+              className="px-3 py-1.5 rounded-full bg-white/8 text-white/75 text-xs font-bold uppercase tracking-[0.18em] hover:bg-white/12"
+            >
+              Close
+            </button>
+          </div>
         </div>
+        {importError && (
+          <div className="px-5 py-2 text-[11px] font-medium text-[#FFB4B4] border-b border-white/10 bg-[#3a2a2a]">
+            {importError}
+          </div>
+        )}
         <div className="p-4 grid gap-3 max-h-[70vh] overflow-y-auto">
           {tracks.map((track) => {
             const isActive = currentTrackId === track.id;
@@ -920,11 +943,11 @@ const MusicLibraryModal = ({
                     <div className="flex items-center justify-between gap-3">
                       <div className="min-w-0">
                         <div className="text-white text-sm font-semibold truncate">{track.title}</div>
-                        <div className="text-white/50 text-[11px] uppercase tracking-[0.16em] truncate">{track.artist}</div>
+                        <div className="text-white/50 text-[11px] uppercase tracking-[0.16em] truncate">{track.fileName ?? track.artist}</div>
                       </div>
                       <div className="text-right shrink-0">
                         <div className="text-white/80 text-xs font-mono">{track.duration}</div>
-                        <div className="text-white/35 text-[10px] font-bold uppercase tracking-[0.12em]">{track.bpm} BPM</div>
+                        <div className="text-white/35 text-[10px] font-bold uppercase tracking-[0.12em]">{track.bpm == null ? '-- BPM' : `${track.bpm} BPM`}</div>
                       </div>
                     </div>
                   </div>
@@ -949,6 +972,7 @@ export default function App() {
   const [audioStateA, setAudioStateA] = useState(defaultDeckAudioState);
   const [audioStateB, setAudioStateB] = useState(defaultDeckAudioState);
   const [libraryDeck, setLibraryDeck] = useState<'A' | 'B' | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [waveformLibrary, setWaveformLibrary] = useState<Record<string, typeof defaultWaveformState>>(getInitialWaveformLibrary);
   const [crossfader, setCrossfader] = useState(50);
   const [playbackRateA, setPlaybackRateA] = useState(1);
@@ -966,6 +990,8 @@ export default function App() {
   const syncSuppressClickRef = useRef<{ A: boolean; B: boolean }>({ A: false, B: false });
   const crossfaderRef = useRef<HTMLDivElement>(null);
   const crossfaderHandleRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const localTrackUrlsRef = useRef(new Set<string>());
   const horizontalWaveformDragRef = useRef<{
     deck: 'A' | 'B' | null,
     pointerId: number | null,
@@ -1352,6 +1378,13 @@ export default function App() {
       window.cancelAnimationFrame(frameId);
     };
   }, [loopStateA.activeLoop, loopStateA.loopEnd, loopStateA.loopStart, loopStateB.activeLoop, loopStateB.loopEnd, loopStateB.loopStart]);
+
+  useEffect(() => () => {
+    localTrackUrlsRef.current.forEach((url) => {
+      URL.revokeObjectURL(url);
+    });
+    localTrackUrlsRef.current.clear();
+  }, []);
 
   useEffect(() => {
     const gains = getDeckMixGains({
@@ -2022,6 +2055,62 @@ export default function App() {
 
   const closeLibrary = () => {
     setLibraryDeck(null);
+    setImportError(null);
+  };
+
+  const openTrackFilePicker = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleImportTracks = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+
+    if (files.length === 0) {
+      return;
+    }
+
+    setImportError(null);
+
+    try {
+      const supportedFiles = files.filter((file) => isSupportedAudioFile(file));
+      const existingSignatures = new Set(
+        libraryTracks
+          .map((track) => track.fileSignature)
+          .filter(Boolean),
+      );
+      const dedupedFiles = supportedFiles.filter((file) => !existingSignatures.has(getFileSignature(file)));
+
+      if (supportedFiles.length === 0) {
+        setImportError('No supported audio files were selected.');
+        return;
+      }
+
+      if (dedupedFiles.length === 0) {
+        setImportError('All selected tracks are already in the library.');
+        return;
+      }
+
+      const importedResults = await Promise.all(
+        dedupedFiles.map((file, index) => createLocalTrack(file, index)),
+      );
+      const importedTracks = importedResults.map((result) => result.track);
+
+      importedTracks.forEach((track) => {
+        if (track.url) {
+          localTrackUrlsRef.current.add(track.url);
+        }
+      });
+
+      setLibraryTracks((prev) => mergeImportedTracks(prev, importedTracks));
+
+      if (dedupedFiles.length !== files.length) {
+        setImportError('Some files were skipped because they were unsupported or already imported.');
+      }
+    } catch {
+      setImportError('Failed to import one or more tracks.');
+    } finally {
+      event.target.value = '';
+    }
   };
 
   const selectTrackForDeck = (deck: 'A' | 'B', trackId: string) => {
@@ -3145,6 +3234,14 @@ export default function App() {
         </div>
       </footer>
 
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="audio/*"
+        multiple
+        hidden
+        onChange={handleImportTracks}
+      />
       <audio ref={audioRefA} preload="metadata" src={trackA?.src} hidden />
       <audio ref={audioRefB} preload="metadata" src={trackB?.src} hidden />
       <MusicLibraryModal
@@ -3152,7 +3249,9 @@ export default function App() {
         isOpen={libraryDeck !== null}
         tracks={libraryTracks}
         currentTrackId={libraryDeck === 'A' ? trackA?.id ?? null : trackB?.id ?? null}
+        importError={importError}
         onClose={closeLibrary}
+        onAddTracks={openTrackFilePicker}
         onSelectTrack={(trackId) => {
           if (!libraryDeck) return;
           selectTrackForDeck(libraryDeck, trackId);
