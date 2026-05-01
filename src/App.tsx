@@ -1674,9 +1674,9 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex-1 flex flex-col justify-center gap-0 py-0 min-h-0 scale-[0.84] md:scale-[0.92] xl:scale-100 origin-center">
+          <div className="flex-1 flex flex-col justify-center gap-0 py-0 min-h-0 scale-[0.84] md:scale-[0.92] xl:scale-100 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:scale-[0.8] origin-center">
             {modeA === 'Mixer' && (
-              <>
+              <div className="flex flex-col [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
                 <Knob 
                   label="Hi" color="#95ED21" value={mixerA.hi} variant="gear" 
                   onChange={(val) => setMixerA(prev => ({ ...prev, hi: val }))} 
@@ -1689,10 +1689,10 @@ export default function App() {
                   label="Low" color="#008cd3" value={mixerA.low} variant="gear" 
                   onChange={(val) => setMixerA(prev => ({ ...prev, low: val }))} 
                 />
-              </>
+              </div>
             )}
             {modeA === 'FX' && (
-              <>
+              <div className="flex flex-col [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
                 <Knob 
                   label="Filter" color={orange} value={fxA.filter} variant="gear" 
                   onChange={(val) => setFxA(prev => ({ ...prev, filter: val }))} 
@@ -1705,7 +1705,7 @@ export default function App() {
                   label="Reverb" color={orange} value={fxA.reverb} variant="gear" 
                   onChange={(val) => setFxA(prev => ({ ...prev, reverb: val }))} 
                 />
-              </>
+              </div>
             )}
             {modeA === 'Level' && (
               <div className="flex-1 flex flex-col items-center justify-center gap-2">
@@ -1795,9 +1795,9 @@ export default function App() {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col justify-center gap-0 py-0 min-h-0 scale-[0.84] md:scale-[0.92] xl:scale-100 origin-center">
+          <div className="flex-1 flex flex-col justify-center gap-0 py-0 min-h-0 scale-[0.84] md:scale-[0.92] xl:scale-100 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:scale-[0.8] origin-center">
             {modeB === 'Mixer' && (
-              <>
+              <div className="flex flex-col [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
                 <Knob 
                   label="Hi" color="#95ED21" value={mixerB.hi} variant="gear" 
                   onChange={(val) => setMixerB(prev => ({ ...prev, hi: val }))} 
@@ -1810,10 +1810,10 @@ export default function App() {
                   label="Low" color="#008cd3" value={mixerB.low} variant="gear" 
                   onChange={(val) => setMixerB(prev => ({ ...prev, low: val }))} 
                 />
-              </>
+              </div>
             )}
             {modeB === 'FX' && (
-              <>
+              <div className="flex flex-col [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
                 <Knob 
                   label="Filter" color={blue} value={fxB.filter} variant="gear" 
                   onChange={(val) => setFxB(prev => ({ ...prev, filter: val }))} 
@@ -1826,7 +1826,7 @@ export default function App() {
                   label="Reverb" color={blue} value={fxB.reverb} variant="gear" 
                   onChange={(val) => setFxB(prev => ({ ...prev, reverb: val }))} 
                 />
-              </>
+              </div>
             )}
             {modeB === 'Level' && (
               <div className="flex-1 flex flex-col items-center justify-center gap-2">
