@@ -1,10 +1,11 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
-import {defineConfig, loadEnv} from 'vite';
+import {defineConfig, loadEnv, searchForWorkspaceRoot} from 'vite';
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
+  const sampleDir = path.resolve(__dirname, '../../Sample');
   return {
     plugins: [react(), tailwindcss()],
     define: {
@@ -19,6 +20,9 @@ export default defineConfig(({mode}) => {
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',
+      fs: {
+        allow: [searchForWorkspaceRoot(process.cwd()), sampleDir],
+      },
     },
   };
 });

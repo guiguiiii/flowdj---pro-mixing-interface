@@ -12,6 +12,13 @@ export const createDeckEqGraph = ({ context, audio }) => {
   const lowFilter = context.createBiquadFilter();
   const midFilter = context.createBiquadFilter();
   const highFilter = context.createBiquadFilter();
+  const fxFilter = context.createBiquadFilter();
+  const echoDelay = context.createDelay(1);
+  const echoFeedback = context.createGain();
+  const echoWetGain = context.createGain();
+  const reverbDelay = context.createDelay(0.5);
+  const reverbFeedback = context.createGain();
+  const reverbWetGain = context.createGain();
   const outputGain = context.createGain();
 
   lowFilter.type = 'lowshelf';
@@ -24,12 +31,35 @@ export const createDeckEqGraph = ({ context, audio }) => {
   highFilter.type = 'highshelf';
   highFilter.frequency.value = 4000;
 
+  fxFilter.type = 'lowpass';
+  fxFilter.frequency.value = 22000;
+  fxFilter.Q.value = 0.0001;
+
+  echoDelay.delayTime.value = 0.18;
+  echoFeedback.gain.value = 0;
+  echoWetGain.gain.value = 0;
+
+  reverbDelay.delayTime.value = 0.06;
+  reverbFeedback.gain.value = 0;
+  reverbWetGain.gain.value = 0;
+
   outputGain.gain.value = 1;
 
   source.connect(lowFilter);
   lowFilter.connect(midFilter);
   midFilter.connect(highFilter);
-  highFilter.connect(outputGain);
+  highFilter.connect(fxFilter);
+  fxFilter.connect(outputGain);
+  fxFilter.connect(echoDelay);
+  echoDelay.connect(echoFeedback);
+  echoFeedback.connect(echoDelay);
+  echoDelay.connect(echoWetGain);
+  echoWetGain.connect(outputGain);
+  fxFilter.connect(reverbDelay);
+  reverbDelay.connect(reverbFeedback);
+  reverbFeedback.connect(reverbDelay);
+  reverbDelay.connect(reverbWetGain);
+  reverbWetGain.connect(outputGain);
   outputGain.connect(context.destination);
 
   return {
@@ -37,6 +67,13 @@ export const createDeckEqGraph = ({ context, audio }) => {
     lowFilter,
     midFilter,
     highFilter,
+    fxFilter,
+    echoDelay,
+    echoFeedback,
+    echoWetGain,
+    reverbDelay,
+    reverbFeedback,
+    reverbWetGain,
     outputGain,
   };
 };

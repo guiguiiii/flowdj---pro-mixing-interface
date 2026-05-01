@@ -45,6 +45,17 @@ import {
   toggleCueSetMode,
 } from './cue.js';
 import { applyDeckEqValues, createDeckEqGraph } from './eq.js';
+import {
+  applyDeckFxValues,
+  createFxKnobState,
+  fxValueToKnobValue,
+  knobValueToFxValue,
+} from './fxKnob.js';
+import {
+  assignHotCuePad,
+  createHotCueBanks,
+  getHotCuePadAction,
+} from './hotCue.js';
 import { findTrackById, updateTrackInLibrary } from './library.js';
 import {
   createDeckVolumeGroups,
@@ -53,6 +64,9 @@ import {
   toggleLevelTarget,
 } from './levelControl.js';
 import { TRACK_LIBRARY } from './trackLibrary.js';
+import { applyPadFx, clearPadFx, PAD_FX_BANKS } from './padFx.js';
+import { createLoopState, toggleLoopState } from './loop.js';
+import { SAMPLE_BANKS, SAMPLE_TRIGGER_MS } from './sample.js';
 import {
   analyzeTrackWaveform,
   EMPTY_WAVEFORM_PEAKS,
@@ -71,6 +85,12 @@ import {
 } from './waveformScrub.js';
 import { getDeckMixGains } from './mixer.js';
 import { getSyncPressAction, getSyncedPlaybackRate, SYNC_LONG_PRESS_MS } from './sync.js';
+import {
+  getPlaybackRateFromTempoPercent,
+  getSliderValueFromTempoPercent,
+  getTempoPercentFromPlaybackRate,
+  getTempoPercentFromSliderValue,
+} from './tempoFader.js';
 import {
   getCrossfaderHandleLeft,
   getCrossfaderValueFromPointer,
@@ -146,6 +166,13 @@ type DeckAudioGraph = {
   lowFilter: BiquadFilterNode,
   midFilter: BiquadFilterNode,
   highFilter: BiquadFilterNode,
+  fxFilter: BiquadFilterNode,
+  echoDelay: DelayNode,
+  echoFeedback: GainNode,
+  echoWetGain: GainNode,
+  reverbDelay: DelayNode,
+  reverbFeedback: GainNode,
+  reverbWetGain: GainNode,
   outputGain: GainNode,
 };
 
@@ -263,6 +290,7 @@ const Knob = ({
   label, 
   color = "white", 
   value = 50, 
+  valueLabel,
   size = "sm", 
   variant = "standard", 
   onChange = (_val: number) => {} 
@@ -270,6 +298,7 @@ const Knob = ({
   label: string; 
   color?: string; 
   value?: number; 
+  valueLabel?: string;
   size?: string; 
   variant?: string; 
   onChange?: (val: number) => void; 
@@ -375,6 +404,9 @@ const Knob = ({
         )}
       </div>
       <span className={`${knobMetrics.labelClass} font-bold uppercase tracking-widest text-black/85 pointer-events-none`}>{label}</span>
+      {valueLabel ? (
+        <span className="text-[8px] font-mono font-bold text-black/45 pointer-events-none">{valueLabel}</span>
+      ) : null}
     </div>
   );
 };
@@ -404,6 +436,7 @@ const VerticalFader = ({
   height = "h-24",
   handleSize = 'md',
   handleOrientation = 'vertical',
+  showCenterMarker = false,
 }: { 
   value: number; 
   onChange?: (val: number) => void; 
@@ -411,6 +444,7 @@ const VerticalFader = ({
   height?: string; 
   handleSize?: 'sm' | 'md' | 'lg';
   handleOrientation?: 'vertical' | 'horizontal';
+  showCenterMarker?: boolean;
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const trackRef = useRef<HTMLDivElement>(null);
@@ -507,6 +541,9 @@ const VerticalFader = ({
       </div>
       
       <div ref={trackRef} className="w-[3px] h-full bg-black/40 rounded-full relative pointer-events-none shadow-inner">
+        {showCenterMarker ? (
+          <div className="absolute left-1/2 top-1/2 z-0 h-px w-6 -translate-x-1/2 -translate-y-1/2 bg-white/45" />
+        ) : null}
         <motion.div 
           className="absolute left-1/2 -translate-x-1/2 z-10"
           ref={handleRef}
@@ -888,6 +925,9 @@ export default function App() {
   const audioRefB = useRef<HTMLAudioElement>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const deckAudioGraphRef = useRef<{ A: DeckAudioGraph | null; B: DeckAudioGraph | null }>({ A: null, B: null });
+  const activePadFxRuntimeRef = useRef<{ A: { padId: string, playbackRate: number } | null; B: { padId: string, playbackRate: number } | null }>({ A: null, B: null });
+  const sampleTriggerTimeoutRef = useRef<{ A: number | null; B: number | null }>({ A: null, B: null });
+  const activeSampleAudioRef = useRef<{ A: HTMLAudioElement[]; B: HTMLAudioElement[] }>({ A: [], B: [] });
   const syncPressTimeoutRef = useRef<{ A: number | null; B: number | null }>({ A: null, B: null });
   const syncPressStartedAtRef = useRef<{ A: number; B: number }>({ A: 0, B: 0 });
   const syncLongPressTriggeredRef = useRef<{ A: boolean; B: boolean }>({ A: false, B: false });
@@ -917,15 +957,13 @@ export default function App() {
 
   // Mixer & FX States
   const [mixerA, setMixerA] = useState({ hi: 50, mid: 50, low: 50 });
-  const [fxA, setFxA] = useState({ filter: 50, echo: 50, reverb: 50 });
+  const [fxA, setFxA] = useState(createFxKnobState);
   const [mixerB, setMixerB] = useState({ hi: 50, mid: 50, low: 50 });
-  const [fxB, setFxB] = useState({ filter: 50, echo: 50, reverb: 50 });
+  const [fxB, setFxB] = useState(createFxKnobState);
   const [deckVolumesA, setDeckVolumesA] = useState(() => createDeckVolumeGroups(80));
   const [deckVolumesB, setDeckVolumesB] = useState(() => createDeckVolumeGroups(80));
   const [levelTargetA, setLevelTargetA] = useState<'master' | 'cues' | 'pads'>('master');
   const [levelTargetB, setLevelTargetB] = useState<'master' | 'cues' | 'pads'>('master');
-  const [pitchA, setPitchA] = useState(50);
-  const [pitchB, setPitchB] = useState(50);
   const [selectedHotCueA, setSelectedHotCueA] = useState(0);
   const [selectedHotCueB, setSelectedHotCueB] = useState(0);
   const [padModeA, setPadModeA] = useState<'hotCue' | 'padFx' | 'sample'>('hotCue');
@@ -940,10 +978,12 @@ export default function App() {
   const [activePadFxB, setActivePadFxB] = useState<string | null>(null);
   const [activeSampleA, setActiveSampleA] = useState<string | null>(null);
   const [activeSampleB, setActiveSampleB] = useState<string | null>(null);
-  const [activeLoopA, setActiveLoopA] = useState<'loop4' | 'loop8' | null>(null);
-  const [activeLoopB, setActiveLoopB] = useState<'loop4' | 'loop8' | null>(null);
+  const [loopStateA, setLoopStateA] = useState(createLoopState);
+  const [loopStateB, setLoopStateB] = useState(createLoopState);
   const [cueStateA, setCueStateA] = useState(createCueState);
   const [cueStateB, setCueStateB] = useState(createCueState);
+  const [hotCuePadsA, setHotCuePadsA] = useState(createHotCueBanks);
+  const [hotCuePadsB, setHotCuePadsB] = useState(createHotCueBanks);
 
   const cycleMode = (current: string, direction: number) => {
     const idx = panelModes.indexOf(current);
@@ -1007,6 +1047,30 @@ export default function App() {
     return graph;
   };
 
+  const getDeckMixerState = (deck: 'A' | 'B') => (deck === 'A' ? mixerA : mixerB);
+  const getDeckFxState = (deck: 'A' | 'B') => (deck === 'A' ? fxA : fxB);
+
+  const handleFxKnobChange = (
+    deck: 'A' | 'B',
+    effectType: 'filter' | 'echo' | 'reverb',
+    knobValue: number,
+  ) => {
+    const graph = deckAudioGraphRef.current[deck];
+    const contextTime = audioContextRef.current?.currentTime ?? 0;
+    const nextValue = knobValueToFxValue(knobValue);
+    const updateFx = deck === 'A' ? setFxA : setFxB;
+
+    updateFx((prev) => {
+      const nextFx = {
+        ...prev,
+        [effectType]: nextValue,
+      };
+
+      applyDeckFxValues({ graph, fx: nextFx, contextTime });
+      return nextFx;
+    });
+  };
+
   const getDeckTrackGain = (deck: 'A' | 'B') => {
     const gains = getDeckMixGains({
       crossfader,
@@ -1015,6 +1079,18 @@ export default function App() {
     });
 
     return deck === 'A' ? gains.deckA : gains.deckB;
+  };
+
+  const handleTempoFaderChange = (deck: 'A' | 'B', sliderValue: number) => {
+    const tempoPercent = getTempoPercentFromSliderValue(sliderValue);
+    const nextPlaybackRate = getPlaybackRateFromTempoPercent(tempoPercent);
+
+    if (deck === 'A') {
+      setPlaybackRateA(nextPlaybackRate);
+      return;
+    }
+
+    setPlaybackRateB(nextPlaybackRate);
   };
 
   useEffect(() => {
@@ -1202,6 +1278,9 @@ export default function App() {
 
     const tick = () => {
       if (audioRefA.current && !audioRefA.current.paused) {
+        if (loopStateA.activeLoop && loopStateA.loopStart !== null && loopStateA.loopEnd !== null && audioRefA.current.currentTime >= loopStateA.loopEnd) {
+          audioRefA.current.currentTime = loopStateA.loopStart;
+        }
         setAudioStateA((prev) => ({
           ...prev,
           currentTime: audioRefA.current?.currentTime ?? prev.currentTime,
@@ -1210,6 +1289,9 @@ export default function App() {
       }
 
       if (audioRefB.current && !audioRefB.current.paused) {
+        if (loopStateB.activeLoop && loopStateB.loopStart !== null && loopStateB.loopEnd !== null && audioRefB.current.currentTime >= loopStateB.loopEnd) {
+          audioRefB.current.currentTime = loopStateB.loopStart;
+        }
         setAudioStateB((prev) => ({
           ...prev,
           currentTime: audioRefB.current?.currentTime ?? prev.currentTime,
@@ -1225,7 +1307,7 @@ export default function App() {
     return () => {
       window.cancelAnimationFrame(frameId);
     };
-  }, []);
+  }, [loopStateA.activeLoop, loopStateA.loopEnd, loopStateA.loopStart, loopStateB.activeLoop, loopStateB.loopEnd, loopStateB.loopStart]);
 
   useEffect(() => {
     const gains = getDeckMixGains({
@@ -1239,6 +1321,7 @@ export default function App() {
 
     if (graphA && context) {
       applyDeckEqValues({ graph: graphA, mixer: mixerA });
+      applyDeckFxValues({ graph: graphA, fx: fxA, contextTime: context.currentTime });
       graphA.outputGain.gain.setTargetAtTime(gains.deckA, context.currentTime, 0.01);
     } else if (audioRefA.current) {
       audioRefA.current.volume = gains.deckA;
@@ -1246,6 +1329,7 @@ export default function App() {
 
     if (graphB && context) {
       applyDeckEqValues({ graph: graphB, mixer: mixerB });
+      applyDeckFxValues({ graph: graphB, fx: fxB, contextTime: context.currentTime });
       graphB.outputGain.gain.setTargetAtTime(gains.deckB, context.currentTime, 0.01);
     } else if (audioRefB.current) {
       audioRefB.current.volume = gains.deckB;
@@ -1260,6 +1344,12 @@ export default function App() {
     mixerB.hi,
     mixerB.mid,
     mixerB.low,
+    fxA.filter,
+    fxA.echo,
+    fxA.reverb,
+    fxB.filter,
+    fxB.echo,
+    fxB.reverb,
     trackAId,
     trackBId,
   ]);
@@ -1279,6 +1369,8 @@ export default function App() {
   useEffect(() => () => {
     const timeoutA = syncPressTimeoutRef.current.A;
     const timeoutB = syncPressTimeoutRef.current.B;
+    const sampleTimeoutA = sampleTriggerTimeoutRef.current.A;
+    const sampleTimeoutB = sampleTriggerTimeoutRef.current.B;
 
     if (timeoutA != null) {
       window.clearTimeout(timeoutA);
@@ -1288,12 +1380,43 @@ export default function App() {
       window.clearTimeout(timeoutB);
     }
 
+    if (sampleTimeoutA != null) {
+      window.clearTimeout(sampleTimeoutA);
+    }
+
+    if (sampleTimeoutB != null) {
+      window.clearTimeout(sampleTimeoutB);
+    }
+
+    activeSampleAudioRef.current.A.forEach((audio) => {
+      audio.pause();
+      audio.src = '';
+    });
+    activeSampleAudioRef.current.B.forEach((audio) => {
+      audio.pause();
+      audio.src = '';
+    });
+
     deckAudioGraphRef.current.A?.outputGain.disconnect();
+    deckAudioGraphRef.current.A?.reverbWetGain.disconnect();
+    deckAudioGraphRef.current.A?.reverbDelay.disconnect();
+    deckAudioGraphRef.current.A?.reverbFeedback.disconnect();
+    deckAudioGraphRef.current.A?.echoWetGain.disconnect();
+    deckAudioGraphRef.current.A?.echoDelay.disconnect();
+    deckAudioGraphRef.current.A?.echoFeedback.disconnect();
+    deckAudioGraphRef.current.A?.fxFilter.disconnect();
     deckAudioGraphRef.current.A?.highFilter.disconnect();
     deckAudioGraphRef.current.A?.midFilter.disconnect();
     deckAudioGraphRef.current.A?.lowFilter.disconnect();
     deckAudioGraphRef.current.A?.source.disconnect();
     deckAudioGraphRef.current.B?.outputGain.disconnect();
+    deckAudioGraphRef.current.B?.reverbWetGain.disconnect();
+    deckAudioGraphRef.current.B?.reverbDelay.disconnect();
+    deckAudioGraphRef.current.B?.reverbFeedback.disconnect();
+    deckAudioGraphRef.current.B?.echoWetGain.disconnect();
+    deckAudioGraphRef.current.B?.echoDelay.disconnect();
+    deckAudioGraphRef.current.B?.echoFeedback.disconnect();
+    deckAudioGraphRef.current.B?.fxFilter.disconnect();
     deckAudioGraphRef.current.B?.highFilter.disconnect();
     deckAudioGraphRef.current.B?.midFilter.disconnect();
     deckAudioGraphRef.current.B?.lowFilter.disconnect();
@@ -1321,7 +1444,9 @@ export default function App() {
 
         if (graph && context) {
           const mixer = deck === 'A' ? mixerA : mixerB;
+          const fx = getDeckFxState(deck);
           applyDeckEqValues({ graph, mixer });
+          applyDeckFxValues({ graph, fx, contextTime: context.currentTime });
           graph.outputGain.gain.setTargetAtTime(getDeckTrackGain(deck), context.currentTime, 0.01);
         }
 
@@ -1498,6 +1623,95 @@ export default function App() {
     };
   };
 
+  const handlePadFxPress = (deck: 'A' | 'B', padId: string) => {
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const setActivePadFx = deck === 'A' ? setActivePadFxA : setActivePadFxB;
+    const playbackRate = deck === 'A' ? playbackRateA : playbackRateB;
+    const context = audioContextRef.current;
+    const graph = deckAudioGraphRef.current[deck];
+
+    setActivePadFx(padId);
+    activePadFxRuntimeRef.current[deck] = applyPadFx({
+      padId,
+      audio,
+      graph,
+      mixer: getDeckMixerState(deck),
+      playbackRate,
+      contextTime: context?.currentTime ?? 0,
+    });
+  };
+
+  const handlePadFxRelease = (deck: 'A' | 'B', padId: string) => {
+    const setActivePadFx = deck === 'A' ? setActivePadFxA : setActivePadFxB;
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const context = audioContextRef.current;
+    const graph = deckAudioGraphRef.current[deck];
+    const activeEffect = activePadFxRuntimeRef.current[deck];
+    const playbackRate = deck === 'A' ? playbackRateA : playbackRateB;
+
+    if (activeEffect?.padId !== padId) {
+      return;
+    }
+
+    clearPadFx({
+      effectState: activeEffect,
+      audio,
+      graph,
+      mixer: getDeckMixerState(deck),
+      playbackRate,
+      contextTime: context?.currentTime ?? 0,
+    });
+    activePadFxRuntimeRef.current[deck] = null;
+    setActivePadFx(null);
+  };
+
+  const handleSampleTrigger = (deck: 'A' | 'B', sample) => {
+    const setActiveSample = deck === 'A' ? setActiveSampleA : setActiveSampleB;
+    const currentTimeout = sampleTriggerTimeoutRef.current[deck];
+
+    if (currentTimeout != null) {
+      window.clearTimeout(currentTimeout);
+    }
+
+    setActiveSample(sample.id);
+    sampleTriggerTimeoutRef.current[deck] = window.setTimeout(() => {
+      setActiveSample((prev) => (prev === sample.id ? null : prev));
+      sampleTriggerTimeoutRef.current[deck] = null;
+    }, SAMPLE_TRIGGER_MS);
+
+    const sampleAudio = new Audio(sample.src);
+    sampleAudio.preload = 'auto';
+    activeSampleAudioRef.current[deck].push(sampleAudio);
+
+    const cleanup = () => {
+      activeSampleAudioRef.current[deck] = activeSampleAudioRef.current[deck].filter((audioItem) => audioItem !== sampleAudio);
+    };
+
+    sampleAudio.addEventListener('ended', cleanup, { once: true });
+    sampleAudio.addEventListener('error', cleanup, { once: true });
+
+    void sampleAudio.play().catch(cleanup);
+  };
+
+  const handleLoopToggle = (deck: 'A' | 'B', loopId: 'loop4' | 'loop8') => {
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const setLoopState = deck === 'A' ? setLoopStateA : setLoopStateB;
+    const bpm = deck === 'A' ? effectiveBpmA : effectiveBpmB;
+    const duration = getDeckDuration(deck);
+
+    if (!audio) {
+      return;
+    }
+
+    setLoopState((prev) => toggleLoopState({
+      state: prev,
+      loopId,
+      currentTime: audio.currentTime,
+      bpm,
+      duration,
+    }));
+  };
+
   const toggleDeckCueSetMode = (deck: 'A' | 'B') => {
     const setCueState = deck === 'A' ? setCueStateA : setCueStateB;
     setCueState((prev) => toggleCueSetMode(prev));
@@ -1532,6 +1746,70 @@ export default function App() {
     audio.pause();
   };
 
+  const handleDeckHotCuePress = async (deck: 'A' | 'B', padIndex: number) => {
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const cueState = deck === 'A' ? cueStateA : cueStateB;
+    const setCueState = deck === 'A' ? setCueStateA : setCueStateB;
+    const hotCueBank = deck === 'A' ? hotCueBankA : hotCueBankB;
+    const hotCuePads = deck === 'A' ? hotCuePadsA[hotCueBank] : hotCuePadsB[hotCueBank];
+    const setHotCuePads = deck === 'A' ? setHotCuePadsA : setHotCuePadsB;
+    const setSelectedHotCue = deck === 'A' ? setSelectedHotCueA : setSelectedHotCueB;
+    const setAudioState = deck === 'A' ? setAudioStateA : setAudioStateB;
+
+    if (!audio) {
+      return;
+    }
+
+    const pad = hotCuePads[padIndex];
+
+    if (!pad) {
+      return;
+    }
+
+    const action = getHotCuePadAction({
+      pad,
+      isSetMode: cueState.isSetMode,
+    });
+
+    if (action.type === 'assign') {
+      setHotCuePads((prev) => ({
+        ...prev,
+        [hotCueBank]: assignHotCuePad({
+          pads: prev[hotCueBank],
+          index: padIndex,
+          currentTime: audio.currentTime,
+        }),
+      }));
+      setSelectedHotCue(padIndex);
+
+      if (cueState.isSetMode) {
+        setCueState((prev) => ({
+          ...prev,
+          isSetMode: false,
+        }));
+      }
+      return;
+    }
+
+    audio.currentTime = action.time;
+    setAudioState((prev) => ({
+      ...prev,
+      currentTime: action.time,
+    }));
+    setSelectedHotCue(padIndex);
+
+    if (action.shouldPlay && audio.paused) {
+      try {
+        await audio.play();
+      } catch {
+        setAudioState((prev) => ({
+          ...prev,
+          error: 'Playback was blocked by the browser',
+        }));
+      }
+    }
+  };
+
   const openLibrary = (deck: 'A' | 'B') => {
     setLibraryDeck(deck);
   };
@@ -1551,6 +1829,10 @@ export default function App() {
     const setTrackId = deck === 'A' ? setTrackAId : setTrackBId;
     const setPlaybackRate = deck === 'A' ? setPlaybackRateA : setPlaybackRateB;
     const setCueState = deck === 'A' ? setCueStateA : setCueStateB;
+    const setHotCuePads = deck === 'A' ? setHotCuePadsA : setHotCuePadsB;
+    const setSelectedHotCue = deck === 'A' ? setSelectedHotCueA : setSelectedHotCueB;
+    const setHotCueBank = deck === 'A' ? setHotCueBankA : setHotCueBankB;
+    const setLoopState = deck === 'A' ? setLoopStateA : setLoopStateB;
 
     if (audio) {
       audio.pause();
@@ -1563,6 +1845,10 @@ export default function App() {
     setAudioState({ ...defaultDeckAudioState });
     setIsPlaying(false);
     setCueState(createCueState());
+    setHotCuePads(createHotCueBanks());
+    setHotCueBank('cue1');
+    setSelectedHotCue(0);
+    setLoopState(createLoopState());
     closeLibrary();
   };
 
@@ -1709,8 +1995,11 @@ export default function App() {
   const remainingTimeB = audioStateB.duration > 0 ? formatRemainingTime(audioStateB.currentTime, audioStateB.duration) : `-${totalDurationB}`;
   const effectiveBpmA = (trackA?.bpm ?? 0) * playbackRateA;
   const effectiveBpmB = (trackB?.bpm ?? 0) * playbackRateB;
-  const pitchPercentA = (playbackRateA - 1) * 100;
-  const pitchPercentB = (playbackRateB - 1) * 100;
+  const pitchPercentA = getTempoPercentFromPlaybackRate(playbackRateA);
+  const pitchPercentB = getTempoPercentFromPlaybackRate(playbackRateB);
+  const pitchFaderValueA = getSliderValueFromTempoPercent(pitchPercentA);
+  const pitchFaderValueB = getSliderValueFromTempoPercent(pitchPercentB);
+  const formatTempoPercent = (value: number) => `${value > 0 ? '+' : ''}${value.toFixed(1)}%`;
   const progressA = getWaveformProgress(audioStateA.currentTime, audioStateA.duration || waveformLibrary[trackA?.id ?? '']?.duration || 0);
   const progressB = getWaveformProgress(audioStateB.currentTime, audioStateB.duration || waveformLibrary[trackB?.id ?? '']?.duration || 0);
   const waveformA = trackA ? (waveformLibrary[trackA.id] ?? defaultWaveformState) : defaultWaveformState;
@@ -1747,54 +2036,30 @@ export default function App() {
     handleWidth: crossfaderMetrics.handleWidth,
   });
 
-  const hotCueBanks = {
-    cue1: [
-      { slot: 'A', name: 'Start', time: '00:03', color: '#FF3B7F', glow: 'rgba(255, 59, 127, 0.28)' },
-      { slot: 'B', name: 'Intro', time: '00:20', color: '#2E8DFF', glow: 'rgba(46, 141, 255, 0.24)' },
-      { slot: 'C', name: 'Build', time: '01:05', color: '#7ED321', glow: 'rgba(126, 211, 33, 0.24)' },
-      { slot: 'D', name: 'Drop', time: '01:32', color: '#A86BFF', glow: 'rgba(168, 107, 255, 0.24)' },
-    ],
-    cue2: [
-      { slot: 'E', name: 'Verse', time: '00:48', color: '#FF9457', glow: 'rgba(255, 148, 87, 0.28)' },
-      { slot: 'F', name: 'Hook', time: '01:24', color: '#FFD24A', glow: 'rgba(255, 210, 74, 0.24)' },
-      { slot: 'G', name: 'Break', time: '02:06', color: '#33D7FF', glow: 'rgba(51, 215, 255, 0.24)' },
-      { slot: 'H', name: 'Outro', time: '03:12', color: '#47D61A', glow: 'rgba(71, 214, 26, 0.24)' },
-    ],
-  } as const;
-  const padFxBanks = {
-    fx1: [
-      { id: 'roll-half', label: 'Roll', value: '1/2', accent: '#33D7FF' },
-      { id: 'sweep-80', label: 'Sweep', value: '80', accent: '#31D8D0' },
-      { id: 'flanger-16', label: 'Flanger', value: '16', accent: '#23D2C3' },
-      { id: 'vbrake-three-quarter', label: 'V.Brake', value: '3/4', accent: '#2E5EFF' },
-    ],
-    fx2: [
-      { id: 'echo-quarter', label: 'Echo', value: '1/4', accent: '#41B5FF' },
-      { id: 'echo-half', label: 'Echo', value: '1/2', accent: '#3AA8FF' },
-      { id: 'reverb-60', label: 'Reverb', value: '60', accent: '#47D61A' },
-      { id: 'r-echo-half', label: 'R.Echo', value: '1/2', accent: '#3852FF' },
-    ],
-  } as const;
-  const sampleBanks = {
-    s1: [
-      { id: 'kick', label: 'Kick', accent: '#FF9457' },
-      { id: 'snare', label: 'Snare', accent: '#FF3B7F' },
-      { id: 'clap', label: 'Clap', accent: '#2E8DFF' },
-      { id: 'vox', label: 'Vox', accent: '#7ED321' },
-    ],
-    s2: [
-      { id: 'hat', label: 'Hat', accent: '#FFD24A' },
-      { id: 'perc', label: 'Perc', accent: '#33D7FF' },
-      { id: 'ride', label: 'Ride', accent: '#A86BFF' },
-      { id: 'bass', label: 'Bass', accent: '#47D61A' },
-    ],
-  } as const;
-  const padFxButtonsA = padFxBanks[padFxBankA];
-  const padFxButtonsB = padFxBanks[padFxBankB];
-  const sampleButtonsA = sampleBanks[sampleBankA];
-  const sampleButtonsB = sampleBanks[sampleBankB];
-  const hotCuesA = hotCueBanks[hotCueBankA];
-  const hotCuesB = hotCueBanks[hotCueBankB];
+  const hotCueButtons = [
+    { id: 1, slot: '1', label: 'Hot Cue', color: '#FF3B7F', glow: 'rgba(255, 59, 127, 0.28)' },
+    { id: 2, slot: '2', label: 'Hot Cue', color: '#2E8DFF', glow: 'rgba(46, 141, 255, 0.24)' },
+    { id: 3, slot: '3', label: 'Hot Cue', color: '#7ED321', glow: 'rgba(126, 211, 33, 0.24)' },
+    { id: 4, slot: '4', label: 'Hot Cue', color: '#A86BFF', glow: 'rgba(168, 107, 255, 0.24)' },
+  ] as const;
+  const padFxButtonsA = PAD_FX_BANKS[padFxBankA];
+  const padFxButtonsB = PAD_FX_BANKS[padFxBankB];
+  const sampleButtonsA = SAMPLE_BANKS[sampleBankA];
+  const sampleButtonsB = SAMPLE_BANKS[sampleBankB];
+  const hotCuesA = hotCueButtons.map((button, index) => ({
+    ...button,
+    ...hotCuePadsA[hotCueBankA][index],
+    displayTime: hotCuePadsA[hotCueBankA][index]?.isSet && hotCuePadsA[hotCueBankA][index].time !== null
+      ? formatClock(hotCuePadsA[hotCueBankA][index].time)
+      : '--:--',
+  }));
+  const hotCuesB = hotCueButtons.map((button, index) => ({
+    ...button,
+    ...hotCuePadsB[hotCueBankB][index],
+    displayTime: hotCuePadsB[hotCueBankB][index]?.isSet && hotCuePadsB[hotCueBankB][index].time !== null
+      ? formatClock(hotCuePadsB[hotCueBankB][index].time)
+      : '--:--',
+  }));
 
   return (
     <div className="h-screen [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[100svh] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:min-h-[100svh] w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans relative">
@@ -1963,16 +2228,16 @@ export default function App() {
             {modeA === 'FX' && (
               <div className="flex flex-col [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
                 <Knob 
-                  label="Filter" color={orange} value={fxA.filter} variant="gear" 
-                  onChange={(val) => setFxA(prev => ({ ...prev, filter: val }))} 
+                  label="Filter" color={orange} value={fxValueToKnobValue(fxA.filter)} valueLabel={`${Math.round(fxA.filter * 100)}%`} variant="gear" 
+                  onChange={(val) => handleFxKnobChange('A', 'filter', val)} 
                 />
                 <Knob 
-                  label="Echo" color={orange} value={fxA.echo} variant="gear" 
-                  onChange={(val) => setFxA(prev => ({ ...prev, echo: val }))} 
+                  label="Echo" color={orange} value={fxValueToKnobValue(fxA.echo)} valueLabel={`${Math.round(fxA.echo * 100)}%`} variant="gear" 
+                  onChange={(val) => handleFxKnobChange('A', 'echo', val)} 
                 />
                 <Knob 
-                  label="Reverb" color={orange} value={fxA.reverb} variant="gear" 
-                  onChange={(val) => setFxA(prev => ({ ...prev, reverb: val }))} 
+                  label="Reverb" color={orange} value={fxValueToKnobValue(fxA.reverb)} valueLabel={`${Math.round(fxA.reverb * 100)}%`} variant="gear" 
+                  onChange={(val) => handleFxKnobChange('A', 'reverb', val)} 
                 />
               </div>
             )}
@@ -2100,16 +2365,16 @@ export default function App() {
             {modeB === 'FX' && (
               <div className="flex flex-col [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
                 <Knob 
-                  label="Filter" color={blue} value={fxB.filter} variant="gear" 
-                  onChange={(val) => setFxB(prev => ({ ...prev, filter: val }))} 
+                  label="Filter" color={blue} value={fxValueToKnobValue(fxB.filter)} valueLabel={`${Math.round(fxB.filter * 100)}%`} variant="gear" 
+                  onChange={(val) => handleFxKnobChange('B', 'filter', val)} 
                 />
                 <Knob 
-                  label="Echo" color={blue} value={fxB.echo} variant="gear" 
-                  onChange={(val) => setFxB(prev => ({ ...prev, echo: val }))} 
+                  label="Echo" color={blue} value={fxValueToKnobValue(fxB.echo)} valueLabel={`${Math.round(fxB.echo * 100)}%`} variant="gear" 
+                  onChange={(val) => handleFxKnobChange('B', 'echo', val)} 
                 />
                 <Knob 
-                  label="Reverb" color={blue} value={fxB.reverb} variant="gear" 
-                  onChange={(val) => setFxB(prev => ({ ...prev, reverb: val }))} 
+                  label="Reverb" color={blue} value={fxValueToKnobValue(fxB.reverb)} valueLabel={`${Math.round(fxB.reverb * 100)}%`} variant="gear" 
+                  onChange={(val) => handleFxKnobChange('B', 'reverb', val)} 
                 />
               </div>
             )}
@@ -2157,11 +2422,11 @@ export default function App() {
           </button>
           <div className="flex flex-col items-center leading-none shrink-0">
             <div className="text-[14px] md:text-[15px] xl:text-[16px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[12px] font-mono font-bold text-black/80">{effectiveBpmA.toFixed(1)}</div>
-            <div className="text-[9px] md:text-[9.5px] xl:text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-mono font-semibold text-black/35">{pitchPercentA.toFixed(1)}%</div>
+            <div className="text-[9px] md:text-[9.5px] xl:text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-mono font-semibold text-black/35">{formatTempoPercent(pitchPercentA)}</div>
           </div>
           </div>
           <div className="flex-1 flex items-center min-h-0 py-2 md:py-3 xl:py-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-1">
-            <VerticalFader value={pitchA} color={orange} height="h-44 md:h-48 xl:h-56" handleSize="sm" handleOrientation="horizontal" onChange={setPitchA} />
+            <VerticalFader value={pitchFaderValueA} color={orange} height="h-44 md:h-48 xl:h-56" handleSize="sm" handleOrientation="horizontal" showCenterMarker onChange={(value) => handleTempoFaderChange('A', value)} />
           </div>
         </div>
 
@@ -2244,13 +2509,13 @@ export default function App() {
                 <div className="grid grid-cols-4 gap-0.5 md:gap-1 min-h-0 flex-1">
                   {hotCuesA.map((cue, i) => (
                     <button
-                      key={i}
-                      onClick={() => setSelectedHotCueA(i)}
+                      key={cue.id}
+                      onClick={() => void handleDeckHotCuePress('A', i)}
                       className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
                       style={{
-                        backgroundColor: selectedHotCueA === i ? '#D8D8D8' : '#D0D0D0',
-                        borderColor: selectedHotCueA === i ? cue.color : '#D0D0D0',
-                        boxShadow: selectedHotCueA === i
+                        backgroundColor: cue.isSet ? '#D8D8D8' : '#D0D0D0',
+                        borderColor: cue.isSet || selectedHotCueA === i ? cue.color : '#D0D0D0',
+                        boxShadow: cue.isSet || selectedHotCueA === i
                           ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${cue.color}, 0 0 18px ${cue.glow}, 0 0 28px ${cue.glow}`
                           : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}`,
                         transform: selectedHotCueA === i ? 'translateY(-1px)' : 'translateY(0)',
@@ -2262,10 +2527,15 @@ export default function App() {
                       >
                         {cue.slot}
                       </div>
+                      {cue.isSet && (
+                        <div className="absolute right-1.5 top-1.5 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-white/90 bg-black/55">
+                          Set
+                        </div>
+                      )}
                       <div className="flex-1" />
                       <div className="space-y-1">
-                        <div className="text-[18px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[15px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
-                        <div className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueA === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
+                        <div className="text-[18px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[15px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.displayTime}</div>
+                        <div className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-bold uppercase tracking-[0.14em]" style={{ color: cue.isSet || selectedHotCueA === i ? cue.color : '#5B5B5B' }}>{cue.label}</div>
                       </div>
                     </button>
                   ))}
@@ -2277,17 +2547,17 @@ export default function App() {
                   ].map((loop) => (
                     <button
                       key={loop.id}
-                      onClick={() => setActiveLoopA((prev) => (prev === loop.id ? null : loop.id))}
+                      onClick={() => handleLoopToggle('A', loop.id)}
                       className="rounded-xl border-2 px-3 py-2 flex items-center justify-center text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)] transition-all duration-150 active:scale-[0.98]"
                       style={{
-                        backgroundColor: activeLoopA === loop.id ? '#D8D8D8' : '#D0D0D0',
-                        borderColor: activeLoopA === loop.id ? orange : '#D0D0D0',
-                        boxShadow: activeLoopA === loop.id
+                        backgroundColor: loopStateA.activeLoop === loop.id ? '#D8D8D8' : '#D0D0D0',
+                        borderColor: loopStateA.activeLoop === loop.id ? orange : '#D0D0D0',
+                        boxShadow: loopStateA.activeLoop === loop.id
                           ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${orange}, 0 0 18px ${orange}55`
                           : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08)`,
                       }}
                     >
-                      <span className="text-[12px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: activeLoopA === loop.id ? orange : '#5B5B5B' }}>
+                      <span className="text-[12px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: loopStateA.activeLoop === loop.id ? orange : '#5B5B5B' }}>
                         {loop.label}
                       </span>
                     </button>
@@ -2300,10 +2570,10 @@ export default function App() {
                 {padFxButtonsA.map((pad) => (
                   <button
                     key={pad.id}
-                    onPointerDown={() => setActivePadFxA(pad.id)}
-                    onPointerUp={() => setActivePadFxA(null)}
-                    onPointerLeave={() => setActivePadFxA(null)}
-                    onPointerCancel={() => setActivePadFxA(null)}
+                    onPointerDown={() => handlePadFxPress('A', pad.id)}
+                    onPointerUp={() => handlePadFxRelease('A', pad.id)}
+                    onPointerLeave={() => handlePadFxRelease('A', pad.id)}
+                    onPointerCancel={() => handlePadFxRelease('A', pad.id)}
                     className="rounded-xl min-h-0 border-2 p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                     style={{
                       backgroundColor: activePadFxA === pad.id ? '#DADADA' : '#D0D0D0',
@@ -2328,10 +2598,7 @@ export default function App() {
                 {sampleButtonsA.map((sample) => (
                   <button
                     key={sample.id}
-                    onPointerDown={() => setActiveSampleA(sample.id)}
-                    onPointerUp={() => setActiveSampleA(null)}
-                    onPointerLeave={() => setActiveSampleA(null)}
-                    onPointerCancel={() => setActiveSampleA(null)}
+                    onClick={() => handleSampleTrigger('A', sample)}
                     className="rounded-xl min-h-0 border-2 p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                     style={{
                       backgroundColor: activeSampleA === sample.id ? '#DADADA' : '#D0D0D0',
@@ -2431,13 +2698,13 @@ export default function App() {
                 <div className="grid grid-cols-4 gap-0.5 md:gap-1 min-h-0 flex-1">
                   {hotCuesB.map((cue, i) => (
                     <button
-                      key={i}
-                      onClick={() => setSelectedHotCueB(i)}
+                      key={cue.id}
+                      onClick={() => void handleDeckHotCuePress('B', i)}
                       className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
                       style={{
-                        backgroundColor: selectedHotCueB === i ? '#D8D8D8' : '#D0D0D0',
-                        borderColor: selectedHotCueB === i ? cue.color : '#D0D0D0',
-                        boxShadow: selectedHotCueB === i
+                        backgroundColor: cue.isSet ? '#D8D8D8' : '#D0D0D0',
+                        borderColor: cue.isSet || selectedHotCueB === i ? cue.color : '#D0D0D0',
+                        boxShadow: cue.isSet || selectedHotCueB === i
                           ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${cue.color}, 0 0 18px ${cue.glow}, 0 0 28px ${cue.glow}`
                           : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}`,
                         transform: selectedHotCueB === i ? 'translateY(-1px)' : 'translateY(0)',
@@ -2449,10 +2716,15 @@ export default function App() {
                       >
                         {cue.slot}
                       </div>
+                      {cue.isSet && (
+                        <div className="absolute right-1.5 top-1.5 rounded-md px-1.5 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] text-white/90 bg-black/55">
+                          Set
+                        </div>
+                      )}
                       <div className="flex-1" />
                       <div className="space-y-1">
-                        <div className="text-[18px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
-                        <div className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueB === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
+                        <div className="text-[18px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.displayTime}</div>
+                        <div className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: cue.isSet || selectedHotCueB === i ? cue.color : '#5B5B5B' }}>{cue.label}</div>
                       </div>
                     </button>
                   ))}
@@ -2464,17 +2736,17 @@ export default function App() {
                   ].map((loop) => (
                     <button
                       key={loop.id}
-                      onClick={() => setActiveLoopB((prev) => (prev === loop.id ? null : loop.id))}
+                      onClick={() => handleLoopToggle('B', loop.id)}
                       className="rounded-xl border-2 px-3 py-2 flex items-center justify-center text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)] transition-all duration-150 active:scale-[0.98]"
                       style={{
-                        backgroundColor: activeLoopB === loop.id ? '#D8D8D8' : '#D0D0D0',
-                        borderColor: activeLoopB === loop.id ? blue : '#D0D0D0',
-                        boxShadow: activeLoopB === loop.id
+                        backgroundColor: loopStateB.activeLoop === loop.id ? '#D8D8D8' : '#D0D0D0',
+                        borderColor: loopStateB.activeLoop === loop.id ? blue : '#D0D0D0',
+                        boxShadow: loopStateB.activeLoop === loop.id
                           ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${blue}, 0 0 18px ${blue}55`
                           : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08)`,
                       }}
                     >
-                      <span className="text-[12px] font-bold uppercase tracking-[0.16em]" style={{ color: activeLoopB === loop.id ? blue : '#5B5B5B' }}>
+                      <span className="text-[12px] font-bold uppercase tracking-[0.16em]" style={{ color: loopStateB.activeLoop === loop.id ? blue : '#5B5B5B' }}>
                         {loop.label}
                       </span>
                     </button>
@@ -2487,10 +2759,10 @@ export default function App() {
                 {padFxButtonsB.map((pad) => (
                   <button
                     key={pad.id}
-                    onPointerDown={() => setActivePadFxB(pad.id)}
-                    onPointerUp={() => setActivePadFxB(null)}
-                    onPointerLeave={() => setActivePadFxB(null)}
-                    onPointerCancel={() => setActivePadFxB(null)}
+                    onPointerDown={() => handlePadFxPress('B', pad.id)}
+                    onPointerUp={() => handlePadFxRelease('B', pad.id)}
+                    onPointerLeave={() => handlePadFxRelease('B', pad.id)}
+                    onPointerCancel={() => handlePadFxRelease('B', pad.id)}
                     className="rounded-xl min-h-0 border-2 p-2 flex flex-col justify-between text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                     style={{
                       backgroundColor: activePadFxB === pad.id ? '#DADADA' : '#D0D0D0',
@@ -2515,10 +2787,7 @@ export default function App() {
                 {sampleButtonsB.map((sample) => (
                   <button
                     key={sample.id}
-                    onPointerDown={() => setActiveSampleB(sample.id)}
-                    onPointerUp={() => setActiveSampleB(null)}
-                    onPointerLeave={() => setActiveSampleB(null)}
-                    onPointerCancel={() => setActiveSampleB(null)}
+                    onClick={() => handleSampleTrigger('B', sample)}
                     className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                     style={{
                       backgroundColor: activeSampleB === sample.id ? '#DADADA' : '#D0D0D0',
@@ -2553,11 +2822,11 @@ export default function App() {
           </button>
           <div className="flex flex-col items-center leading-none shrink-0">
             <div className="text-[14px] md:text-[15px] xl:text-[16px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[12px] font-mono font-bold text-black/80">{effectiveBpmB.toFixed(1)}</div>
-            <div className="text-[9px] md:text-[9.5px] xl:text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-mono font-semibold text-black/35">{pitchPercentB.toFixed(1)}%</div>
+            <div className="text-[9px] md:text-[9.5px] xl:text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-mono font-semibold text-black/35">{formatTempoPercent(pitchPercentB)}</div>
           </div>
           </div>
           <div className="flex-1 flex items-center min-h-0 py-2 md:py-3 xl:py-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-1">
-            <VerticalFader value={pitchB} color={blue} height="h-44 md:h-48 xl:h-56" handleSize="sm" handleOrientation="horizontal" onChange={setPitchB} />
+            <VerticalFader value={pitchFaderValueB} color={blue} height="h-44 md:h-48 xl:h-56" handleSize="sm" handleOrientation="horizontal" showCenterMarker onChange={(value) => handleTempoFaderChange('B', value)} />
           </div>
         </div>
       </div>
