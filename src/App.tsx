@@ -2210,7 +2210,7 @@ export default function App() {
           
           <div className="flex-1 flex flex-col justify-center gap-0 py-0 min-h-0 scale-[0.84] md:scale-[0.92] xl:scale-100 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:scale-[0.8] origin-center">
             {modeA === 'Mixer' && (
-              <div className="flex flex-col [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
+              <div className="flex flex-col items-center justify-center gap-[clamp(14px,2.8vh,30px)] py-[clamp(6px,1.6vh,18px)] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0">
                 <Knob 
                   label="Hi" color="#95ED21" value={mixerA.hi} variant="gear" 
                   onChange={(val) => setMixerA(prev => ({ ...prev, hi: val }))} 
@@ -2226,7 +2226,7 @@ export default function App() {
               </div>
             )}
             {modeA === 'FX' && (
-              <div className="flex flex-col [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
+              <div className="flex flex-col items-center justify-center gap-[clamp(14px,2.8vh,30px)] py-[clamp(6px,1.6vh,18px)] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0">
                 <Knob 
                   label="Filter" color={orange} value={fxValueToKnobValue(fxA.filter)} valueLabel={`${Math.round(fxA.filter * 100)}%`} variant="gear" 
                   onChange={(val) => handleFxKnobChange('A', 'filter', val)} 
@@ -2347,7 +2347,7 @@ export default function App() {
 
           <div className="flex-1 flex flex-col justify-center gap-0 py-0 min-h-0 scale-[0.84] md:scale-[0.92] xl:scale-100 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:scale-[0.8] origin-center">
             {modeB === 'Mixer' && (
-              <div className="flex flex-col [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
+              <div className="flex flex-col items-center justify-center gap-[clamp(14px,2.8vh,30px)] py-[clamp(6px,1.6vh,18px)] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0">
                 <Knob 
                   label="Hi" color="#95ED21" value={mixerB.hi} variant="gear" 
                   onChange={(val) => setMixerB(prev => ({ ...prev, hi: val }))} 
@@ -2363,7 +2363,7 @@ export default function App() {
               </div>
             )}
             {modeB === 'FX' && (
-              <div className="flex flex-col [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
+              <div className="flex flex-col items-center justify-center gap-[clamp(14px,2.8vh,30px)] py-[clamp(6px,1.6vh,18px)] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0">
                 <Knob 
                   label="Filter" color={blue} value={fxValueToKnobValue(fxB.filter)} valueLabel={`${Math.round(fxB.filter * 100)}%`} variant="gear" 
                   onChange={(val) => handleFxKnobChange('B', 'filter', val)} 
