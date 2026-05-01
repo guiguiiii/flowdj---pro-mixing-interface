@@ -38,7 +38,14 @@ import {
   saveTrackAnalysisCache,
 } from './analysisCache.js';
 import { formatClock, formatRemainingTime } from './audio.js';
+import { applyDeckEqValues, createDeckEqGraph } from './eq.js';
 import { findTrackById, updateTrackInLibrary } from './library.js';
+import {
+  createDeckVolumeGroups,
+  getLevelSliderValue,
+  setLevelSliderValue,
+  toggleLevelTarget,
+} from './levelControl.js';
 import { TRACK_LIBRARY } from './trackLibrary.js';
 import {
   analyzeTrackWaveform,
@@ -60,7 +67,7 @@ import {
   getVerticalFaderHandleBottom,
   getVerticalFaderValueFromPointer,
 } from './crossfader.js';
-import { getKnobValueFromHorizontalDrag } from './knob.js';
+import { getKnobRotationDegrees, getKnobValueFromHorizontalDrag } from './knob.js';
 
 const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: number }) => (
   <svg
@@ -122,6 +129,14 @@ type WaveformPoint = {
   mid: number,
   high: number,
 };
+type DeckAudioGraph = {
+  source: MediaElementAudioSourceNode,
+  lowFilter: BiquadFilterNode,
+  midFilter: BiquadFilterNode,
+  highFilter: BiquadFilterNode,
+  outputGain: GainNode,
+};
+
 const emphasizeWaveformContrast = (value: number, exponent = 1.8, floor = 0) => {
   const normalized = Math.max(value - floor, 0);
   return Math.pow(normalized, exponent);
@@ -253,7 +268,7 @@ const Knob = ({
   const knobMetrics = size === 'sm'
     ? { shell: 46, labelClass: 'text-[8.5px]', dotOffsetY: 1.8 }
     : { shell: 58, labelClass: 'text-[9px]', dotOffsetY: 2.2 };
-  const rotation = (value - 50) * 2.4;
+  const rotation = getKnobRotationDegrees(value);
   const knobId = label.toLowerCase().replace(/[^a-z0-9]+/g, '-');
   const outerPath =
     'M50.9475 0.6064C54.1575 -0.8436 57.9475 0.3864 59.6975 3.4464C62.5575 8.4564 67.4275 11.9964 73.0675 13.1664C76.5175 13.8864 78.8575 17.1064 78.4775 20.6064C77.8475 26.3364 79.7075 32.0664 83.5875 36.3264C85.9575 38.9364 85.9575 42.9164 83.5875 45.5264C79.7075 49.7864 77.8475 55.5164 78.4775 61.2464C78.8675 64.7464 76.5275 67.9764 73.0675 68.6864C67.4275 69.8564 62.5475 73.3964 59.6975 78.4064C57.9475 81.4664 54.1675 82.6964 50.9475 81.2464C45.6975 78.8764 39.6775 78.8764 34.4175 81.2464C31.2075 82.6964 27.4175 81.4664 25.6675 78.4064C22.8075 73.3964 17.9375 69.8564 12.2975 68.6864C8.8475 67.9664 6.5075 64.7464 6.8875 61.2464C7.5175 55.5164 5.6575 49.7864 1.7775 45.5264C-0.5925 42.9164 -0.5925 38.9364 1.7775 36.3264C5.6575 32.0664 7.5175 26.3364 6.8875 20.6064C6.4975 17.1064 8.8375 13.8764 12.2975 13.1664C17.9375 11.9964 22.8175 8.4564 25.6675 3.4464C27.4175 0.3864 31.1975 -0.8436 34.4175 0.6064C39.6675 2.9764 45.6875 2.9764 50.9475 0.6064Z';
@@ -339,7 +354,7 @@ const Knob = ({
             {/* Center-aligned indicator container */}
             <div
               className="absolute inset-0 flex items-start justify-center pt-2.5"
-              style={{ transform: `rotate(${(value - 50) * 2.4}deg)` }}
+              style={{ transform: `rotate(${getKnobRotationDegrees(value)}deg)` }}
             >
               <div className="w-2 h-2 rounded-full shadow-sm" style={{ backgroundColor: color }} />
             </div>
@@ -831,6 +846,8 @@ export default function App() {
   const [playbackRateB, setPlaybackRateB] = useState(1);
   const audioRefA = useRef<HTMLAudioElement>(null);
   const audioRefB = useRef<HTMLAudioElement>(null);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const deckAudioGraphRef = useRef<{ A: DeckAudioGraph | null; B: DeckAudioGraph | null }>({ A: null, B: null });
   const syncPressTimeoutRef = useRef<{ A: number | null; B: number | null }>({ A: null, B: null });
   const syncPressStartedAtRef = useRef<{ A: number; B: number }>({ A: 0, B: 0 });
   const syncLongPressTriggeredRef = useRef<{ A: boolean; B: boolean }>({ A: false, B: false });
@@ -853,12 +870,8 @@ export default function App() {
   const [fxA, setFxA] = useState({ filter: 50, echo: 50, reverb: 50 });
   const [mixerB, setMixerB] = useState({ hi: 50, mid: 50, low: 50 });
   const [fxB, setFxB] = useState({ filter: 50, echo: 50, reverb: 50 });
-  const [levelA, setLevelA] = useState(80);
-  const [levelB, setLevelB] = useState(80);
-  const [cueLevelA, setCueLevelA] = useState(80);
-  const [cueLevelB, setCueLevelB] = useState(80);
-  const [padsLevelA, setPadsLevelA] = useState(80);
-  const [padsLevelB, setPadsLevelB] = useState(80);
+  const [deckVolumesA, setDeckVolumesA] = useState(() => createDeckVolumeGroups(80));
+  const [deckVolumesB, setDeckVolumesB] = useState(() => createDeckVolumeGroups(80));
   const [levelTargetA, setLevelTargetA] = useState<'master' | 'cues' | 'pads'>('master');
   const [levelTargetB, setLevelTargetB] = useState<'master' | 'cues' | 'pads'>('master');
   const [pitchA, setPitchA] = useState(50);
@@ -884,28 +897,71 @@ export default function App() {
     return panelModes[nextIdx];
   };
 
-  const getLevelControl = (
-    target: 'master' | 'cues' | 'pads',
-    masterValue: number,
-    cuesValue: number,
-    padsValue: number,
-    setMasterValue: React.Dispatch<React.SetStateAction<number>>,
-    setCuesValue: React.Dispatch<React.SetStateAction<number>>,
-    setPadsValue: React.Dispatch<React.SetStateAction<number>>,
-  ) => {
-    if (target === 'cues') {
-      return { value: cuesValue, onChange: setCuesValue };
-    }
-
-    if (target === 'pads') {
-      return { value: padsValue, onChange: setPadsValue };
-    }
-
-    return { value: masterValue, onChange: setMasterValue };
+  const levelControlA = {
+    value: getLevelSliderValue({ groups: deckVolumesA, target: levelTargetA }),
+    onChange: (nextValue: number) => {
+      setDeckVolumesA((prev) => setLevelSliderValue({ groups: prev, target: levelTargetA, nextValue }));
+    },
   };
 
-  const levelControlA = getLevelControl(levelTargetA, levelA, cueLevelA, padsLevelA, setLevelA, setCueLevelA, setPadsLevelA);
-  const levelControlB = getLevelControl(levelTargetB, levelB, cueLevelB, padsLevelB, setLevelB, setCueLevelB, setPadsLevelB);
+  const levelControlB = {
+    value: getLevelSliderValue({ groups: deckVolumesB, target: levelTargetB }),
+    onChange: (nextValue: number) => {
+      setDeckVolumesB((prev) => setLevelSliderValue({ groups: prev, target: levelTargetB, nextValue }));
+    },
+  };
+
+  const ensureAudioContext = () => {
+    if (audioContextRef.current) {
+      return audioContextRef.current;
+    }
+
+    if (typeof window === 'undefined') {
+      return null;
+    }
+
+    const webAudioWindow = window as Window & typeof globalThis & {
+      webkitAudioContext?: typeof AudioContext,
+    };
+    const AudioContextClass = webAudioWindow.AudioContext || webAudioWindow.webkitAudioContext;
+
+    if (!AudioContextClass) {
+      return null;
+    }
+
+    audioContextRef.current = new AudioContextClass();
+    return audioContextRef.current;
+  };
+
+  const ensureDeckAudioGraph = (deck: 'A' | 'B', audio: HTMLAudioElement | null) => {
+    const existingGraph = deckAudioGraphRef.current[deck];
+
+    if (existingGraph || !audio) {
+      return existingGraph;
+    }
+
+    const context = ensureAudioContext();
+
+    if (!context) {
+      return null;
+    }
+
+    const graph = createDeckEqGraph({ context, audio });
+    deckAudioGraphRef.current[deck] = graph;
+    audio.volume = 1;
+
+    return graph;
+  };
+
+  const getDeckTrackGain = (deck: 'A' | 'B') => {
+    const gains = getDeckMixGains({
+      crossfader,
+      levelA: deckVolumesA.track,
+      levelB: deckVolumesB.track,
+    });
+
+    return deck === 'A' ? gains.deckA : gains.deckB;
+  };
 
   useEffect(() => {
     const updateCrossfaderMetrics = () => {
@@ -1118,16 +1174,41 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const gains = getDeckMixGains({ crossfader, levelA, levelB });
+    const gains = getDeckMixGains({
+      crossfader,
+      levelA: deckVolumesA.track,
+      levelB: deckVolumesB.track,
+    });
+    const context = audioContextRef.current;
+    const graphA = deckAudioGraphRef.current.A;
+    const graphB = deckAudioGraphRef.current.B;
 
-    if (audioRefA.current) {
+    if (graphA && context) {
+      applyDeckEqValues({ graph: graphA, mixer: mixerA });
+      graphA.outputGain.gain.setTargetAtTime(gains.deckA, context.currentTime, 0.01);
+    } else if (audioRefA.current) {
       audioRefA.current.volume = gains.deckA;
     }
 
-    if (audioRefB.current) {
+    if (graphB && context) {
+      applyDeckEqValues({ graph: graphB, mixer: mixerB });
+      graphB.outputGain.gain.setTargetAtTime(gains.deckB, context.currentTime, 0.01);
+    } else if (audioRefB.current) {
       audioRefB.current.volume = gains.deckB;
     }
-  }, [crossfader, levelA, levelB, trackAId, trackBId]);
+  }, [
+    crossfader,
+    deckVolumesA.track,
+    deckVolumesB.track,
+    mixerA.hi,
+    mixerA.mid,
+    mixerA.low,
+    mixerB.hi,
+    mixerB.mid,
+    mixerB.low,
+    trackAId,
+    trackBId,
+  ]);
 
   useEffect(() => {
     if (audioRefA.current) {
@@ -1152,6 +1233,19 @@ export default function App() {
     if (timeoutB != null) {
       window.clearTimeout(timeoutB);
     }
+
+    deckAudioGraphRef.current.A?.outputGain.disconnect();
+    deckAudioGraphRef.current.A?.highFilter.disconnect();
+    deckAudioGraphRef.current.A?.midFilter.disconnect();
+    deckAudioGraphRef.current.A?.lowFilter.disconnect();
+    deckAudioGraphRef.current.A?.source.disconnect();
+    deckAudioGraphRef.current.B?.outputGain.disconnect();
+    deckAudioGraphRef.current.B?.highFilter.disconnect();
+    deckAudioGraphRef.current.B?.midFilter.disconnect();
+    deckAudioGraphRef.current.B?.lowFilter.disconnect();
+    deckAudioGraphRef.current.B?.source.disconnect();
+
+    void audioContextRef.current?.close();
   }, []);
 
   const toggleDeckPlayback = async (deck: 'A' | 'B') => {
@@ -1161,6 +1255,22 @@ export default function App() {
 
     if (audio.paused) {
       try {
+        const context = ensureAudioContext();
+
+        ensureDeckAudioGraph(deck, audio);
+
+        if (context?.state === 'suspended') {
+          await context.resume();
+        }
+
+        const graph = ensureDeckAudioGraph(deck, audio);
+
+        if (graph && context) {
+          const mixer = deck === 'A' ? mixerA : mixerB;
+          applyDeckEqValues({ graph, mixer });
+          graph.outputGain.gain.setTargetAtTime(getDeckTrackGain(deck), context.currentTime, 0.01);
+        }
+
         await audio.play();
       } catch {
         if (deck === 'A') {
@@ -1603,14 +1713,14 @@ export default function App() {
                 />
                 <div className="flex flex-col items-center gap-1.5">
                   <button
-                    onClick={() => setLevelTargetA((prev) => (prev === 'cues' ? 'master' : 'cues'))}
+                    onClick={() => setLevelTargetA((prev) => toggleLevelTarget(prev, 'cues'))}
                     className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetA === 'cues' ? 'text-white' : 'text-black/45 bg-white/20'}`}
                     style={levelTargetA === 'cues' ? { backgroundColor: orange, boxShadow: `0 0 12px ${orange}88` } : undefined}
                   >
                     Cue
                   </button>
                   <button
-                    onClick={() => setLevelTargetA((prev) => (prev === 'pads' ? 'master' : 'pads'))}
+                    onClick={() => setLevelTargetA((prev) => toggleLevelTarget(prev, 'pads'))}
                     className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetA === 'pads' ? 'text-white' : 'text-black/45 bg-white/20'}`}
                     style={levelTargetA === 'pads' ? { backgroundColor: orange, boxShadow: `0 0 12px ${orange}88` } : undefined}
                   >
@@ -1724,14 +1834,14 @@ export default function App() {
                 />
                 <div className="flex flex-col items-center gap-1.5">
                   <button
-                    onClick={() => setLevelTargetB((prev) => (prev === 'cues' ? 'master' : 'cues'))}
+                    onClick={() => setLevelTargetB((prev) => toggleLevelTarget(prev, 'cues'))}
                     className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetB === 'cues' ? 'text-white' : 'text-black/45 bg-white/20'}`}
                     style={levelTargetB === 'cues' ? { backgroundColor: blue, boxShadow: `0 0 12px ${blue}88` } : undefined}
                   >
                     Cue
                   </button>
                   <button
-                    onClick={() => setLevelTargetB((prev) => (prev === 'pads' ? 'master' : 'pads'))}
+                    onClick={() => setLevelTargetB((prev) => toggleLevelTarget(prev, 'pads'))}
                     className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetB === 'pads' ? 'text-white' : 'text-black/45 bg-white/20'}`}
                     style={levelTargetB === 'pads' ? { backgroundColor: blue, boxShadow: `0 0 12px ${blue}88` } : undefined}
                   >
