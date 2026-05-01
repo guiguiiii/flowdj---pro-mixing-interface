@@ -890,6 +890,8 @@ export default function App() {
   const [activePadFxB, setActivePadFxB] = useState<string | null>(null);
   const [activeSampleA, setActiveSampleA] = useState<string | null>(null);
   const [activeSampleB, setActiveSampleB] = useState<string | null>(null);
+  const [activeLoopA, setActiveLoopA] = useState<'loop4' | 'loop8' | null>(null);
+  const [activeLoopB, setActiveLoopB] = useState<'loop4' | 'loop8' | null>(null);
 
   const cycleMode = (current: string, direction: number) => {
     const idx = panelModes.indexOf(current);
@@ -1951,34 +1953,63 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex-1 grid grid-cols-4 gap-0.5 md:gap-1 min-h-0">
-            {padModeA === 'hotCue' && hotCuesA.map((cue, i) => (
-              <button
-                key={i}
-                onClick={() => setSelectedHotCueA(i)}
-                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
-                style={{
-                  backgroundColor: selectedHotCueA === i ? '#D8D8D8' : '#D0D0D0',
-                  borderColor: selectedHotCueA === i ? cue.color : '#D0D0D0',
-                  boxShadow: selectedHotCueA === i
-                    ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${cue.color}, 0 0 18px ${cue.glow}, 0 0 28px ${cue.glow}`
-                    : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}`,
-                  transform: selectedHotCueA === i ? 'translateY(-1px)' : 'translateY(0)',
-                }}
-              >
-                <div
-                  className="absolute left-1.5 top-1.5 rounded-md px-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-1.5 py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 text-[12px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[10px] font-black leading-none transition-all duration-150"
-                  style={{ backgroundColor: cue.color, color: '#111111' }}
-                >
-                  {cue.slot}
+          <div className="flex-1 min-h-0">
+            {padModeA === 'hotCue' && (
+              <div className="h-full flex flex-col gap-1 md:gap-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1 min-h-0">
+                <div className="grid grid-cols-4 gap-0.5 md:gap-1 min-h-0 flex-1">
+                  {hotCuesA.map((cue, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedHotCueA(i)}
+                      className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
+                      style={{
+                        backgroundColor: selectedHotCueA === i ? '#D8D8D8' : '#D0D0D0',
+                        borderColor: selectedHotCueA === i ? cue.color : '#D0D0D0',
+                        boxShadow: selectedHotCueA === i
+                          ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${cue.color}, 0 0 18px ${cue.glow}, 0 0 28px ${cue.glow}`
+                          : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}`,
+                        transform: selectedHotCueA === i ? 'translateY(-1px)' : 'translateY(0)',
+                      }}
+                    >
+                      <div
+                        className="absolute left-1.5 top-1.5 rounded-md px-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-1.5 py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 text-[12px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[10px] font-black leading-none transition-all duration-150"
+                        style={{ backgroundColor: cue.color, color: '#111111' }}
+                      >
+                        {cue.slot}
+                      </div>
+                      <div className="flex-1" />
+                      <div className="space-y-1">
+                        <div className="text-[18px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[15px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
+                        <div className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueA === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <div className="flex-1" />
-                <div className="space-y-1">
-                  <div className="text-[18px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[15px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
-                  <div className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueA === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
+                <div className="grid grid-cols-2 gap-0.5 md:gap-1 h-14 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-12 shrink-0">
+                  {[
+                    { id: 'loop4' as const, label: 'Loop 4' },
+                    { id: 'loop8' as const, label: 'Loop 8' },
+                  ].map((loop) => (
+                    <button
+                      key={loop.id}
+                      onClick={() => setActiveLoopA((prev) => (prev === loop.id ? null : loop.id))}
+                      className="rounded-xl border-2 px-3 py-2 flex items-center justify-center text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)] transition-all duration-150 active:scale-[0.98]"
+                      style={{
+                        backgroundColor: activeLoopA === loop.id ? '#D8D8D8' : '#D0D0D0',
+                        borderColor: activeLoopA === loop.id ? orange : '#D0D0D0',
+                        boxShadow: activeLoopA === loop.id
+                          ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${orange}, 0 0 18px ${orange}55`
+                          : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08)`,
+                      }}
+                    >
+                      <span className="text-[12px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[10px] font-bold uppercase tracking-[0.16em]" style={{ color: activeLoopA === loop.id ? orange : '#5B5B5B' }}>
+                        {loop.label}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              </button>
-            ))}
+              </div>
+            )}
             {padModeA === 'padFx' && padFxButtonsA.map((pad) => (
               <button
                 key={pad.id}
@@ -2101,34 +2132,63 @@ export default function App() {
             </div>
           </div>
           
-          <div className="flex-1 grid grid-cols-4 gap-0.5 md:gap-1 min-h-0">
-            {padModeB === 'hotCue' && hotCuesB.map((cue, i) => (
-              <button
-                key={i}
-                onClick={() => setSelectedHotCueB(i)}
-                className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
-                style={{
-                  backgroundColor: selectedHotCueB === i ? '#D8D8D8' : '#D0D0D0',
-                  borderColor: selectedHotCueB === i ? cue.color : '#D0D0D0',
-                  boxShadow: selectedHotCueB === i
-                    ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${cue.color}, 0 0 18px ${cue.glow}, 0 0 28px ${cue.glow}`
-                    : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}`,
-                  transform: selectedHotCueB === i ? 'translateY(-1px)' : 'translateY(0)',
-                }}
-              >
-                <div
-                  className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none transition-all duration-150"
-                  style={{ backgroundColor: cue.color, color: '#111111' }}
-                >
-                  {cue.slot}
+          <div className="flex-1 min-h-0">
+            {padModeB === 'hotCue' && (
+              <div className="h-full flex flex-col gap-1 md:gap-1.5 min-h-0">
+                <div className="grid grid-cols-4 gap-0.5 md:gap-1 min-h-0 flex-1">
+                  {hotCuesB.map((cue, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setSelectedHotCueB(i)}
+                      className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
+                      style={{
+                        backgroundColor: selectedHotCueB === i ? '#D8D8D8' : '#D0D0D0',
+                        borderColor: selectedHotCueB === i ? cue.color : '#D0D0D0',
+                        boxShadow: selectedHotCueB === i
+                          ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${cue.color}, 0 0 18px ${cue.glow}, 0 0 28px ${cue.glow}`
+                          : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}`,
+                        transform: selectedHotCueB === i ? 'translateY(-1px)' : 'translateY(0)',
+                      }}
+                    >
+                      <div
+                        className="absolute left-1.5 top-1.5 rounded-md px-2 py-1 text-[12px] font-black leading-none transition-all duration-150"
+                        style={{ backgroundColor: cue.color, color: '#111111' }}
+                      >
+                        {cue.slot}
+                      </div>
+                      <div className="flex-1" />
+                      <div className="space-y-1">
+                        <div className="text-[18px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
+                        <div className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueB === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
+                      </div>
+                    </button>
+                  ))}
                 </div>
-                <div className="flex-1" />
-                <div className="space-y-1">
-                  <div className="text-[18px] font-mono font-semibold tracking-tight text-[#5B5B5B]">{cue.time}</div>
-                  <div className="text-[10px] font-bold uppercase tracking-[0.14em]" style={{ color: selectedHotCueB === i ? cue.color : '#5B5B5B' }}>{cue.name}</div>
+                <div className="grid grid-cols-2 gap-0.5 md:gap-1 h-14 shrink-0">
+                  {[
+                    { id: 'loop4' as const, label: 'Loop 4' },
+                    { id: 'loop8' as const, label: 'Loop 8' },
+                  ].map((loop) => (
+                    <button
+                      key={loop.id}
+                      onClick={() => setActiveLoopB((prev) => (prev === loop.id ? null : loop.id))}
+                      className="rounded-xl border-2 px-3 py-2 flex items-center justify-center text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)] transition-all duration-150 active:scale-[0.98]"
+                      style={{
+                        backgroundColor: activeLoopB === loop.id ? '#D8D8D8' : '#D0D0D0',
+                        borderColor: activeLoopB === loop.id ? blue : '#D0D0D0',
+                        boxShadow: activeLoopB === loop.id
+                          ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${blue}, 0 0 18px ${blue}55`
+                          : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08)`,
+                      }}
+                    >
+                      <span className="text-[12px] font-bold uppercase tracking-[0.16em]" style={{ color: activeLoopB === loop.id ? blue : '#5B5B5B' }}>
+                        {loop.label}
+                      </span>
+                    </button>
+                  ))}
                 </div>
-              </button>
-            ))}
+              </div>
+            )}
             {padModeB === 'padFx' && padFxButtonsB.map((pad) => (
               <button
                 key={pad.id}
