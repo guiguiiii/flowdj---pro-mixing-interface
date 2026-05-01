@@ -38,6 +38,12 @@ import {
   saveTrackAnalysisCache,
 } from './analysisCache.js';
 import { formatClock, formatRemainingTime } from './audio.js';
+import {
+  applyCueAssignment,
+  createCueState,
+  getCueButtonAction,
+  toggleCueSetMode,
+} from './cue.js';
 import { applyDeckEqValues, createDeckEqGraph } from './eq.js';
 import { findTrackById, updateTrackInLibrary } from './library.js';
 import {
@@ -59,6 +65,10 @@ import {
   normalizeWaveformPeaks,
   shapeWaveformForDisplay,
 } from './waveform.js';
+import {
+  getScrubbedTimeFromVerticalDrag,
+  getSeekTimeFromHorizontalPointer,
+} from './waveformScrub.js';
 import { getDeckMixGains } from './mixer.js';
 import { getSyncPressAction, getSyncedPlaybackRate, SYNC_LONG_PRESS_MS } from './sync.js';
 import {
@@ -89,6 +99,8 @@ const transportPlayButtonClassName =
   "w-14 h-10 rounded-[12px] flex items-center justify-center border border-white/10 bg-[#D0D0D0] shadow-[-2px_-2px_4px_rgba(78,78,78,0.12),2px_2px_4px_rgba(42,42,42,0.35)] transition-transform duration-150 hover:scale-[1.02] active:scale-95 active:shadow-[inset_-2px_-2px_4px_rgba(78,78,78,0.12),inset_2px_2px_4px_rgba(42,42,42,0.3)]";
 const orbitSpinClassName = 'motion-safe:animate-[spin_2s_linear_infinite]';
 const defaultDeckAudioState = { currentTime: 0, duration: 0, error: null as string | null };
+const transportSecondaryButtonClassName =
+  "px-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-3 h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-8 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 border border-white/10";
 const defaultWaveformState = {
   peaks: EMPTY_WAVEFORM_PEAKS,
   displayPeaks: EMPTY_WAVEFORM_PEAKS,
@@ -511,10 +523,18 @@ const HorizontalWaveform = ({
   peaks,
   progress,
   isAnalyzing,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
 }: {
   peaks: WaveformPoint[],
   progress: number,
   isAnalyzing: boolean,
+  onPointerDown?: React.PointerEventHandler<HTMLDivElement>,
+  onPointerMove?: React.PointerEventHandler<HTMLDivElement>,
+  onPointerUp?: React.PointerEventHandler<HTMLDivElement>,
+  onPointerCancel?: React.PointerEventHandler<HTMLDivElement>,
 }) => {
   const width = 560;
   const height = 72;
@@ -524,7 +544,13 @@ const HorizontalWaveform = ({
   const playedWidth = Math.max(progress * width, 0);
 
   return (
-    <div className="h-full w-full bg-black rounded-[3px] border border-white/10 overflow-hidden relative">
+    <div
+      className="h-full w-full bg-black rounded-[3px] border border-white/10 overflow-hidden relative touch-none cursor-ew-resize"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+    >
       <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.05),rgba(0,0,0,0.24))]" />
       <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
         <polygon points={basePolygon} fill={analysisWaveformPalette.outer} opacity="0.98" />
@@ -545,10 +571,18 @@ const VerticalWaveform = ({
   peaks,
   offset,
   isAnalyzing,
+  onPointerDown,
+  onPointerMove,
+  onPointerUp,
+  onPointerCancel,
 }: {
   peaks: WaveformPoint[],
   offset: number,
   isAnalyzing: boolean,
+  onPointerDown?: React.PointerEventHandler<HTMLDivElement>,
+  onPointerMove?: React.PointerEventHandler<HTMLDivElement>,
+  onPointerUp?: React.PointerEventHandler<HTMLDivElement>,
+  onPointerCancel?: React.PointerEventHandler<HTMLDivElement>,
 }) => {
   const rowStep = 10;
   const svgWidth = 164;
@@ -584,7 +618,13 @@ const VerticalWaveform = ({
   const translateY = getVerticalWaveformTranslateY(playbackRowIndex, rowStep, offset);
 
   return (
-    <div className="flex-1 h-full relative bg-black border-x border-white/5 overflow-hidden">
+    <div
+      className="flex-1 h-full relative bg-black border-x border-white/5 overflow-hidden touch-none cursor-ns-resize"
+      onPointerDown={onPointerDown}
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+    >
       <div className="absolute inset-x-0 top-0 bottom-0 pointer-events-none">
         <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 bg-[#FF4A4A] shadow-[0_0_8px_rgba(255,74,74,0.35)]" />
         <div className="absolute left-0 right-0 top-1/4 h-px bg-white/55" />
@@ -854,6 +894,16 @@ export default function App() {
   const syncSuppressClickRef = useRef<{ A: boolean; B: boolean }>({ A: false, B: false });
   const crossfaderRef = useRef<HTMLDivElement>(null);
   const crossfaderHandleRef = useRef<HTMLDivElement>(null);
+  const horizontalWaveformDragRef = useRef<{
+    deck: 'A' | 'B' | null,
+    pointerId: number | null,
+  }>({ deck: null, pointerId: null });
+  const verticalWaveformDragRef = useRef<{
+    deck: 'A' | 'B' | null,
+    pointerId: number | null,
+    startY: number,
+    startTime: number,
+  }>({ deck: null, pointerId: null, startY: 0, startTime: 0 });
   const [isCrossfaderDragging, setIsCrossfaderDragging] = useState(false);
   const [crossfaderMetrics, setCrossfaderMetrics] = useState({ trackWidth: 0, handleWidth: 0 });
   const analyzedTrackIdsRef = useRef(new Set(Object.keys(getInitialAnalysisCache())));
@@ -892,6 +942,8 @@ export default function App() {
   const [activeSampleB, setActiveSampleB] = useState<string | null>(null);
   const [activeLoopA, setActiveLoopA] = useState<'loop4' | 'loop8' | null>(null);
   const [activeLoopB, setActiveLoopB] = useState<'loop4' | 'loop8' | null>(null);
+  const [cueStateA, setCueStateA] = useState(createCueState);
+  const [cueStateB, setCueStateB] = useState(createCueState);
 
   const cycleMode = (current: string, direction: number) => {
     const idx = panelModes.indexOf(current);
@@ -1287,6 +1339,199 @@ export default function App() {
     audio.pause();
   };
 
+  const getDeckDuration = (deck: 'A' | 'B') => {
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const audioState = deck === 'A' ? audioStateA : audioStateB;
+    const track = deck === 'A' ? trackA : trackB;
+    const waveform = waveformLibrary[track?.id ?? ''];
+
+    return audio?.duration || audioState.duration || waveform?.duration || 0;
+  };
+
+  const updateDeckPlaybackTime = (deck: 'A' | 'B', nextTime: number) => {
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const setAudioState = deck === 'A' ? setAudioStateA : setAudioStateB;
+    const duration = getDeckDuration(deck);
+
+    if (!audio || !Number.isFinite(duration) || duration <= 0) {
+      return;
+    }
+
+    audio.currentTime = nextTime;
+    setAudioState((prev) => ({
+      ...prev,
+      currentTime: nextTime,
+      duration: Number.isFinite(duration) ? duration : prev.duration,
+    }));
+  };
+
+  const seekDeckFromHorizontalPointer = (
+    deck: 'A' | 'B',
+    pointerX: number,
+    bounds: DOMRect,
+  ) => {
+    const duration = getDeckDuration(deck);
+
+    if (!Number.isFinite(duration) || duration <= 0) {
+      return;
+    }
+
+    const nextTime = getSeekTimeFromHorizontalPointer({
+      pointerX,
+      left: bounds.left,
+      width: bounds.width,
+      duration,
+    });
+
+    updateDeckPlaybackTime(deck, nextTime);
+  };
+
+  const scrubDeckFromVerticalPointer = (
+    deck: 'A' | 'B',
+    currentY: number,
+  ) => {
+    const duration = getDeckDuration(deck);
+
+    if (!Number.isFinite(duration) || duration <= 0) {
+      return;
+    }
+
+    const nextTime = getScrubbedTimeFromVerticalDrag({
+      startTime: verticalWaveformDragRef.current.startTime,
+      startY: verticalWaveformDragRef.current.startY,
+      currentY,
+      duration,
+    });
+
+    updateDeckPlaybackTime(deck, nextTime);
+  };
+
+  const handleHorizontalWaveformPointerDown = (
+    deck: 'A' | 'B',
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    horizontalWaveformDragRef.current = { deck, pointerId: event.pointerId };
+    event.currentTarget.setPointerCapture(event.pointerId);
+    seekDeckFromHorizontalPointer(deck, event.clientX, event.currentTarget.getBoundingClientRect());
+  };
+
+  const handleHorizontalWaveformPointerMove = (
+    deck: 'A' | 'B',
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (
+      horizontalWaveformDragRef.current.deck !== deck ||
+      horizontalWaveformDragRef.current.pointerId !== event.pointerId
+    ) {
+      return;
+    }
+
+    seekDeckFromHorizontalPointer(deck, event.clientX, event.currentTarget.getBoundingClientRect());
+  };
+
+  const handleHorizontalWaveformPointerEnd = (
+    deck: 'A' | 'B',
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (
+      horizontalWaveformDragRef.current.deck !== deck ||
+      horizontalWaveformDragRef.current.pointerId !== event.pointerId
+    ) {
+      return;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    horizontalWaveformDragRef.current = { deck: null, pointerId: null };
+  };
+
+  const handleVerticalWaveformPointerDown = (
+    deck: 'A' | 'B',
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    verticalWaveformDragRef.current = {
+      deck,
+      pointerId: event.pointerId,
+      startY: event.clientY,
+      startTime: audio?.currentTime ?? 0,
+    };
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const handleVerticalWaveformPointerMove = (
+    deck: 'A' | 'B',
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (
+      verticalWaveformDragRef.current.deck !== deck ||
+      verticalWaveformDragRef.current.pointerId !== event.pointerId
+    ) {
+      return;
+    }
+
+    scrubDeckFromVerticalPointer(deck, event.clientY);
+  };
+
+  const handleVerticalWaveformPointerEnd = (
+    deck: 'A' | 'B',
+    event: React.PointerEvent<HTMLDivElement>,
+  ) => {
+    if (
+      verticalWaveformDragRef.current.deck !== deck ||
+      verticalWaveformDragRef.current.pointerId !== event.pointerId
+    ) {
+      return;
+    }
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
+    verticalWaveformDragRef.current = {
+      deck: null,
+      pointerId: null,
+      startY: 0,
+      startTime: 0,
+    };
+  };
+
+  const toggleDeckCueSetMode = (deck: 'A' | 'B') => {
+    const setCueState = deck === 'A' ? setCueStateA : setCueStateB;
+    setCueState((prev) => toggleCueSetMode(prev));
+  };
+
+  const handleDeckCuePress = (deck: 'A' | 'B') => {
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const setCueState = deck === 'A' ? setCueStateA : setCueStateB;
+
+    if (!audio) {
+      return;
+    }
+
+    const cueState = deck === 'A' ? cueStateA : cueStateB;
+    const action = getCueButtonAction({
+      state: cueState,
+    });
+
+    if (action.type === 'assign') {
+      setCueState(applyCueAssignment({
+        state: cueState,
+        currentTime: audio.currentTime,
+      }));
+      return;
+    }
+
+    if (action.type !== 'recall') {
+      return;
+    }
+
+    audio.currentTime = action.cuePoint;
+    audio.pause();
+  };
+
   const openLibrary = (deck: 'A' | 'B') => {
     setLibraryDeck(deck);
   };
@@ -1305,6 +1550,7 @@ export default function App() {
     const setIsPlaying = deck === 'A' ? setIsPlayingA : setIsPlayingB;
     const setTrackId = deck === 'A' ? setTrackAId : setTrackBId;
     const setPlaybackRate = deck === 'A' ? setPlaybackRateA : setPlaybackRateB;
+    const setCueState = deck === 'A' ? setCueStateA : setCueStateB;
 
     if (audio) {
       audio.pause();
@@ -1316,8 +1562,15 @@ export default function App() {
     setPlaybackRate(1);
     setAudioState({ ...defaultDeckAudioState });
     setIsPlaying(false);
+    setCueState(createCueState());
     closeLibrary();
   };
+
+  const cueSetButtonClassName = (isSetMode: boolean) =>
+    `${transportSecondaryButtonClassName} ${isSetMode ? 'bg-[#FFE2DE] ring-1 ring-[#FF3B30]/50 shadow-[0_0_16px_rgba(255,59,48,0.22),2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e]' : 'bg-[#D0D0D0]'}`;
+
+  const cueRecallButtonClassName = (isCueSet: boolean, isSetMode: boolean) =>
+    `${transportSecondaryButtonClassName} ${isCueSet ? 'bg-[#FFF1D6] text-[#8A5A00] ring-1 ring-[#FFB74D]/45 shadow-[0_0_14px_rgba(255,183,77,0.18),2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e]' : 'bg-[#D0D0D0] text-[#3C3C3C]'} ${isSetMode ? 'scale-[0.98]' : ''}`;
 
   const syncDeckToOther = (targetDeck: 'A' | 'B') => {
     const sourceTrack = targetDeck === 'A' ? trackB : trackA;
@@ -1584,7 +1837,15 @@ export default function App() {
             {/* Waveform Area - Next to artwork */}
             <div className="flex-1 flex items-end pt-1">
               <div className="w-full h-7 opacity-95">
-                <HorizontalWaveform peaks={overviewPeaksA} progress={progressA} isAnalyzing={waveformA.status === 'loading'} />
+                <HorizontalWaveform
+                  peaks={overviewPeaksA}
+                  progress={progressA}
+                  isAnalyzing={waveformA.status === 'loading'}
+                  onPointerDown={(event) => handleHorizontalWaveformPointerDown('A', event)}
+                  onPointerMove={(event) => handleHorizontalWaveformPointerMove('A', event)}
+                  onPointerUp={(event) => handleHorizontalWaveformPointerEnd('A', event)}
+                  onPointerCancel={(event) => handleHorizontalWaveformPointerEnd('A', event)}
+                />
               </div>
             </div>
           </div>
@@ -1639,7 +1900,15 @@ export default function App() {
             {/* Waveform Area - Next to artwork */}
             <div className="flex-1 flex items-end pt-1">
               <div className="w-full h-7 opacity-95">
-                <HorizontalWaveform peaks={overviewPeaksB} progress={progressB} isAnalyzing={waveformB.status === 'loading'} />
+                <HorizontalWaveform
+                  peaks={overviewPeaksB}
+                  progress={progressB}
+                  isAnalyzing={waveformB.status === 'loading'}
+                  onPointerDown={(event) => handleHorizontalWaveformPointerDown('B', event)}
+                  onPointerMove={(event) => handleHorizontalWaveformPointerMove('B', event)}
+                  onPointerUp={(event) => handleHorizontalWaveformPointerEnd('B', event)}
+                  onPointerCancel={(event) => handleHorizontalWaveformPointerEnd('B', event)}
+                />
               </div>
             </div>
           </div>
@@ -1750,10 +2019,26 @@ export default function App() {
 
         {/* Central Vertical Waveforms & VU Meters - Spanning 2 rows */}
         <div className="row-span-2 opz-panel flex overflow-hidden relative px-1.5 md:px-2 py-1 gap-1.5 md:gap-2.5 min-w-0 border-x border-black/5">
-          <VerticalWaveform peaks={beatWindowFrameA.peaks} offset={beatWindowFrameA.offset} isAnalyzing={waveformA.status === 'loading'} />
+          <VerticalWaveform
+            peaks={beatWindowFrameA.peaks}
+            offset={beatWindowFrameA.offset}
+            isAnalyzing={waveformA.status === 'loading'}
+            onPointerDown={(event) => handleVerticalWaveformPointerDown('A', event)}
+            onPointerMove={(event) => handleVerticalWaveformPointerMove('A', event)}
+            onPointerUp={(event) => handleVerticalWaveformPointerEnd('A', event)}
+            onPointerCancel={(event) => handleVerticalWaveformPointerEnd('A', event)}
+          />
           <VUMeter color={orange} active={isPlayingA} />
           <VUMeter color={blue} active={isPlayingB} />
-          <VerticalWaveform peaks={beatWindowFrameB.peaks} offset={beatWindowFrameB.offset} isAnalyzing={waveformB.status === 'loading'} />
+          <VerticalWaveform
+            peaks={beatWindowFrameB.peaks}
+            offset={beatWindowFrameB.offset}
+            isAnalyzing={waveformB.status === 'loading'}
+            onPointerDown={(event) => handleVerticalWaveformPointerDown('B', event)}
+            onPointerMove={(event) => handleVerticalWaveformPointerMove('B', event)}
+            onPointerUp={(event) => handleVerticalWaveformPointerEnd('B', event)}
+            onPointerCancel={(event) => handleVerticalWaveformPointerEnd('B', event)}
+          />
         </div>
 
         {/* Deck Display B */}
@@ -2287,11 +2572,21 @@ export default function App() {
           >
             <PlayPauseIcon />
           </button>
-          <button className="px-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-3 h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-8 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10 group">
-            <div className="w-2.5 h-2.5 bg-[#FF3B30] rounded-full shadow-[0_0_10px_#FF3B30] group-hover:scale-110 transition-transform" />
+          <button
+            onClick={() => toggleDeckCueSetMode('A')}
+            className={`${cueSetButtonClassName(cueStateA.isSetMode)} group`}
+            aria-pressed={cueStateA.isSetMode}
+            aria-label={cueStateA.isSetMode ? 'Deck A set mode armed' : 'Arm deck A cue set mode'}
+          >
+            <div className={`w-2.5 h-2.5 rounded-full transition-transform ${cueStateA.isSetMode ? 'bg-[#FF3B30] shadow-[0_0_14px_#FF3B30]' : 'bg-[#FF3B30] shadow-[0_0_10px_#FF3B30] group-hover:scale-110'}`} />
           </button>
-          <button className="px-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-3 h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-8 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10">
-            <span className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold text-[#3C3C3C] tracking-widest">CUE</span>
+          <button
+            onClick={() => handleDeckCuePress('A')}
+            className={cueRecallButtonClassName(cueStateA.isCueSet, cueStateA.isSetMode)}
+            aria-pressed={cueStateA.isCueSet}
+            aria-label={cueStateA.isCueSet ? 'Deck A cue point is set' : 'Deck A cue point is not set'}
+          >
+            <span className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold tracking-widest">CUE</span>
           </button>
         </div>
 
@@ -2336,11 +2631,21 @@ export default function App() {
 
         {/* Right Controls */}
         <div className="flex items-center gap-3 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
-          <button className="px-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-3 h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-8 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10">
-            <span className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold text-[#3C3C3C] tracking-widest">CUE</span>
+          <button
+            onClick={() => handleDeckCuePress('B')}
+            className={cueRecallButtonClassName(cueStateB.isCueSet, cueStateB.isSetMode)}
+            aria-pressed={cueStateB.isCueSet}
+            aria-label={cueStateB.isCueSet ? 'Deck B cue point is set' : 'Deck B cue point is not set'}
+          >
+            <span className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold tracking-widest">CUE</span>
           </button>
-          <button className="px-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-3 h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-8 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 bg-[#D0D0D0] border border-white/10 group">
-            <div className="w-2.5 h-2.5 bg-[#FF3B30] rounded-full shadow-[0_0_10px_#FF3B30] group-hover:scale-110 transition-transform" />
+          <button
+            onClick={() => toggleDeckCueSetMode('B')}
+            className={`${cueSetButtonClassName(cueStateB.isSetMode)} group`}
+            aria-pressed={cueStateB.isSetMode}
+            aria-label={cueStateB.isSetMode ? 'Deck B set mode armed' : 'Arm deck B cue set mode'}
+          >
+            <div className={`w-2.5 h-2.5 rounded-full transition-transform ${cueStateB.isSetMode ? 'bg-[#FF3B30] shadow-[0_0_14px_#FF3B30]' : 'bg-[#FF3B30] shadow-[0_0_10px_#FF3B30] group-hover:scale-110'}`} />
           </button>
           <button 
             onClick={() => void toggleDeckPlayback('B')} 
