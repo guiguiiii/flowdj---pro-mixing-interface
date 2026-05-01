@@ -407,9 +407,9 @@ const Knob = ({
           </div>
         )}
       </div>
-      <span className={`${knobMetrics.labelClass} font-bold uppercase tracking-widest text-black/85 pointer-events-none`}>{label}</span>
+      <span className={`${knobMetrics.labelClass} font-bold uppercase tracking-widest leading-none text-black/85 pointer-events-none`}>{label}</span>
       {valueLabel ? (
-        <span className="text-[8px] font-mono font-bold text-black/45 pointer-events-none">{valueLabel}</span>
+        <span className="text-[8px] leading-none font-mono font-bold text-black/45 pointer-events-none">{valueLabel}</span>
       ) : null}
     </div>
   );
@@ -2432,7 +2432,7 @@ export default function App() {
               </div>
             )}
             {modeA === 'FX' && (
-              <div className="w-full flex-1 min-h-0 box-border flex flex-col items-center justify-evenly gap-[clamp(4px,1.2vh,14px)] py-[clamp(8px,1.8vh,16px)] [@media(max-height:760px)]:gap-[clamp(2px,0.8vh,8px)] [@media(max-height:760px)]:py-[clamp(6px,1.1vh,10px)] [@media(max-height:760px)]:scale-[0.96] [@media(max-height:760px)]:origin-center [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:scale-[0.94]">
+              <div className="flex flex-col items-center justify-center gap-[clamp(14px,2.8vh,30px)] py-[clamp(6px,1.6vh,18px)] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0">
                 <Knob 
                   label="Filter" color={orange} value={fxValueToKnobValue(fxA.filter)} valueLabel={`${Math.round(fxA.filter * 100)}%`} variant="gear" 
                   onChange={(val) => handleFxKnobChange('A', 'filter', val)} 
@@ -2583,7 +2583,7 @@ export default function App() {
               </div>
             )}
             {modeB === 'FX' && (
-              <div className="w-full flex-1 min-h-0 box-border flex flex-col items-center justify-evenly gap-[clamp(4px,1.2vh,14px)] py-[clamp(8px,1.8vh,16px)] [@media(max-height:760px)]:gap-[clamp(2px,0.8vh,8px)] [@media(max-height:760px)]:py-[clamp(6px,1.1vh,10px)] [@media(max-height:760px)]:scale-[0.96] [@media(max-height:760px)]:origin-center [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-height:900px)]:scale-[0.94]">
+              <div className="flex flex-col items-center justify-center gap-[clamp(14px,2.8vh,30px)] py-[clamp(6px,1.6vh,18px)] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0">
                 <Knob 
                   label="Filter" color={blue} value={fxValueToKnobValue(fxB.filter)} valueLabel={`${Math.round(fxB.filter * 100)}%`} variant="gear" 
                   onChange={(val) => handleFxKnobChange('B', 'filter', val)} 
