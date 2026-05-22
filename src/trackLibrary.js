@@ -7,6 +7,7 @@ export const createLibraryTrack = ({
   src,
   duration = '00:00',
   artwork,
+  tag,
 }) => ({
   id,
   title,
@@ -15,120 +16,77 @@ export const createLibraryTrack = ({
   key,
   src,
   duration,
+  tag,
   artwork: artwork ?? `https://picsum.photos/seed/${id}/100/100`,
 });
 
+const createTaggedTracks = ({ prefix, tag, titles }) => (
+  titles.map((title, index) => {
+    const number = String(index + 1).padStart(2, '0');
+
+    return createLibraryTrack({
+      id: `${prefix}-${number}`,
+      title,
+      artist: tag,
+      bpm: 120,
+      key: '8A',
+      src: `/audio/${prefix}-${number}.mp3`,
+      tag,
+    });
+  })
+);
+
+const hoonoTitles = [
+  'Call of Silence 4',
+  'DECO_27 - Monitoring (Best Friend Remix) feat. Hatsune Miku',
+  'PORNOGRAFFITTI THE DAY',
+  'Pocket Monsters OP01 - Aim to Be a Pokemon Master',
+  'Renai Circulation',
+  'Rolling Girl feat. Hatsune Miku - Project DIVA Arcade Future Tone',
+  'ZUTOMAYO - Byoushinwo Kamu',
+  'Daidaidaidaidaikirai (BIGFIGHT REMIX)',
+  'ヨルシカ - 千鳥',
+  'ローリンガール - いおぎりょう Remix',
+  'ワールドイズマイン [CPK! Remix]',
+  '第六感 feat.東京ゲゲゲイ',
+  'Kenshi Yonezu - IRIS OUT',
+  'Kenshi Yonezu - KICK BACK (Frost Children Remix)',
+];
+
+const yiyuTitles = [
+  'REBEL HEART',
+  'HOT_',
+  'Hype Boy',
+  'Supernatural',
+  'BANG BANG',
+  '똑똑똑',
+  'Sticky',
+  'Cherish (My Love)',
+  'Cherish (My Love) (Moonlight Remix)',
+  'Do the Dance',
+  'Magnetic',
+  'OTT',
+  'OMG',
+];
+
+const shutingTitles = [
+  'GAS GAS GAS',
+  'HEYYEYAAEYAAAEYAEYAA',
+  'OIIA OIIA',
+  'MC美江',
+  'Spongebob Sings Super Idol',
+  '睡衣派對',
+  '小八愛拼才會贏',
+  'Take On Me',
+  'CHIPI CHIPI CHAPA CHAPA',
+  'rick+新寶島',
+  'Butterfly',
+  '崴孟三百天禮物',
+  'Gonna Give You Up',
+];
+
 export const TRACK_LIBRARY = [
-  createLibraryTrack({
-    id: 'hoono-01',
-    title: 'Call of Silence 4',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-01.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-02',
-    title: 'DECO_27 - Monitoring (Best Friend Remix) feat. Hatsune Miku',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-02.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-03',
-    title: 'PORNOGRAFFITTI THE DAY',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-03.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-04',
-    title: 'Pocket Monsters OP01 - Aim to Be a Pokemon Master',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-04.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-05',
-    title: 'Renai Circulation',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-05.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-06',
-    title: 'Rolling Girl feat. Hatsune Miku - Project DIVA Arcade Future Tone',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-06.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-07',
-    title: 'ZUTOMAYO - Byoushinwo Kamu',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-07.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-08',
-    title: 'Daidaidaidaidaikirai (BIGFIGHT REMIX)',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-08.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-09',
-    title: 'ヨルシカ - 千鳥',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-09.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-10',
-    title: 'ローリンガール - いおぎりょう Remix',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-10.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-11',
-    title: 'ワールドイズマイン [CPK! Remix]',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-11.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-12',
-    title: '第六感 feat.東京ゲゲゲイ',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-12.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-13',
-    title: 'Kenshi Yonezu - IRIS OUT',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-13.mp3',
-  }),
-  createLibraryTrack({
-    id: 'hoono-14',
-    title: 'Kenshi Yonezu - KICK BACK (Frost Children Remix)',
-    artist: 'hoono歌單',
-    bpm: 120,
-    key: '8A',
-    src: '/audio/hoono-14.mp3',
-  }),
+  ...createTaggedTracks({ prefix: 'hoono', tag: 'hoono歌單', titles: hoonoTitles }),
+  ...createTaggedTracks({ prefix: 'yiyu', tag: '薏瑀歌單', titles: yiyuTitles }),
+  ...createTaggedTracks({ prefix: 'shuting', tag: '輸婷歌單', titles: shutingTitles }),
 ];

@@ -894,6 +894,18 @@ const MusicLibraryModal = ({
 }) => {
   if (!isOpen || !deck) return null;
 
+  const tagOptions = ['全部', ...Array.from(new Set(tracks.map((track) => track.tag).filter(Boolean)))];
+  const [activeTag, setActiveTag] = useState('全部');
+  const visibleTracks = activeTag === '全部'
+    ? tracks
+    : tracks.filter((track) => track.tag === activeTag);
+
+  useEffect(() => {
+    if (!tagOptions.includes(activeTag)) {
+      setActiveTag('全部');
+    }
+  }, [activeTag, tagOptions]);
+
   return (
     <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/65 backdrop-blur-sm px-4">
       <div className="w-full max-w-xl rounded-[28px] border border-white/10 bg-[#2E2E2E] shadow-[0_20px_60px_rgba(0,0,0,0.45)] overflow-hidden">
@@ -922,8 +934,23 @@ const MusicLibraryModal = ({
             {importError}
           </div>
         )}
+        <div className="px-4 py-3 border-b border-white/10 bg-[#333333] flex flex-wrap gap-2">
+          {tagOptions.map((tag) => {
+            const isActiveTag = activeTag === tag;
+
+            return (
+              <button
+                key={tag}
+                onClick={() => setActiveTag(tag)}
+                className={`px-3 py-1.5 rounded-full text-[11px] font-bold tracking-[0.08em] transition-colors ${isActiveTag ? 'bg-white text-[#202020]' : 'bg-white/8 text-white/70 hover:bg-white/12'}`}
+              >
+                {tag}
+              </button>
+            );
+          })}
+        </div>
         <div className="p-4 grid gap-3 max-h-[70vh] overflow-y-auto">
-          {tracks.map((track) => {
+          {visibleTracks.map((track) => {
             const isActive = currentTrackId === track.id;
 
             return (
@@ -932,7 +959,7 @@ const MusicLibraryModal = ({
                 onClick={() => onSelectTrack(track.id)}
                 className={`w-full rounded-[22px] border text-left p-3 transition-all ${isActive ? 'border-white/50 bg-white/12' : 'border-white/10 bg-white/5 hover:bg-white/10'}`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-start gap-3">
                   <img
                     src={track.artwork}
                     alt={track.title}
@@ -940,12 +967,12 @@ const MusicLibraryModal = ({
                     referrerPolicy="no-referrer"
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-center justify-between gap-3">
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                       <div className="min-w-0">
-                        <div className="text-white text-sm font-semibold truncate">{track.title}</div>
+                        <div className="text-white text-sm font-semibold leading-tight whitespace-normal break-words">{track.title}</div>
                         <div className="text-white/50 text-[11px] uppercase tracking-[0.16em] truncate">{track.fileName ?? track.artist}</div>
                       </div>
-                      <div className="text-right shrink-0">
+                      <div className="text-left sm:text-right shrink-0">
                         <div className="text-white/80 text-xs font-mono">{track.duration}</div>
                         <div className="text-white/35 text-[10px] font-bold uppercase tracking-[0.12em]">{track.bpm == null ? '-- BPM' : `${track.bpm} BPM`}</div>
                       </div>

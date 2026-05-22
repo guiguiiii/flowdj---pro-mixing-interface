@@ -12,4 +12,5 @@ export interface Track {
   source?: 'built-in' | 'local';
   createdAt?: number;
   fileSignature?: string;
+  tag?: string;
 }
