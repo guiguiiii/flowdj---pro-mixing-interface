@@ -14,8 +14,13 @@ export const SAMPLE_BANKS = {
     { id: 'ride', label: 'RIDE', accent: '#A86BFF', src: toPublicSampleSrc('ride.wav') },
     { id: 'bass', label: 'BASS', accent: '#47D61A', src: toPublicSampleSrc('bass.wav') },
   ],
+  s3: [
+    { id: 'how', label: 'HOW', accent: '#FF7B72', src: toPublicSampleSrc('how.mp3') },
+    { id: 'dog', label: 'DOG', accent: '#6ACBFF', src: toPublicSampleSrc('dog.mp3') },
+    { id: 'oiia', label: 'OIIA', accent: '#FFE066', src: toPublicSampleSrc('oiia.mp3') },
+  ],
 };
 
 export const getSampleById = (sampleId) => (
-  [...SAMPLE_BANKS.s1, ...SAMPLE_BANKS.s2].find((sample) => sample.id === sampleId) ?? null
+  [...SAMPLE_BANKS.s1, ...SAMPLE_BANKS.s2, ...SAMPLE_BANKS.s3].find((sample) => sample.id === sampleId) ?? null
 );

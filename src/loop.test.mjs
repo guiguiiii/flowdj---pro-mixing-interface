@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 
 import {
   createLoopState,
+  getLoopPlaybackWrapTime,
   getLoopDurationSeconds,
   toggleLoopState,
 } from './loop.js';
@@ -22,17 +23,18 @@ assert.deepEqual(
   toggleLoopState({
     state: createLoopState(),
     loopId: 'loop4',
-    currentTime: 32,
+    currentTime: 32.37,
     bpm: 120,
+    beatOffset: 0.18,
     duration: 180,
   }),
   {
     activeLoop: 'loop4',
     loopBeats: 4,
-    loopStart: 32,
-    loopEnd: 34,
+    loopStart: 32.18,
+    loopEnd: 34.18,
   },
-  'pressing Loop 4 should create a 4-beat loop from the current time',
+  'pressing Loop 4 should create a 4-beat loop snapped to the track beat offset',
 );
 
 assert.deepEqual(
@@ -61,7 +63,7 @@ assert.deepEqual(
       loopEnd: 44,
     },
     loopId: 'loop4',
-    currentTime: 50,
+    currentTime: 50.37,
     bpm: 120,
     duration: 180,
   }),
@@ -71,7 +73,7 @@ assert.deepEqual(
     loopStart: 50,
     loopEnd: 52,
   },
-  'switching from Loop 8 to Loop 4 should rebuild the loop from the current time',
+  'switching from Loop 8 to Loop 4 should rebuild the loop snapped to the current beat',
 );
 
 assert.deepEqual(
@@ -89,4 +91,34 @@ assert.deepEqual(
     loopEnd: 180,
   },
   'loops near the end of the track should clamp safely inside the track duration',
+);
+
+assert.equal(
+  getLoopPlaybackWrapTime({
+    currentTime: 33.98,
+    loopStart: 32,
+    loopEnd: 34,
+  }),
+  32,
+  'playback should wrap slightly before the loop end to avoid audible seek gaps',
+);
+
+assert.equal(
+  getLoopPlaybackWrapTime({
+    currentTime: 34.012,
+    loopStart: 32,
+    loopEnd: 34,
+  }),
+  32.012,
+  'playback should preserve overshoot when the frame arrives after the loop end',
+);
+
+assert.equal(
+  getLoopPlaybackWrapTime({
+    currentTime: 33.5,
+    loopStart: 32,
+    loopEnd: 34,
+  }),
+  null,
+  'playback should not wrap before the loop boundary lead window',
 );

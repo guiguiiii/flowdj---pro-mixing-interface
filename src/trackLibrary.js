@@ -36,39 +36,6 @@ const createTaggedTracks = ({ prefix, tag, titles }) => (
   })
 );
 
-const hoonoTitles = [
-  'Call of Silence 4',
-  'DECO_27 - Monitoring (Best Friend Remix) feat. Hatsune Miku',
-  'PORNOGRAFFITTI THE DAY',
-  'Pocket Monsters OP01 - Aim to Be a Pokemon Master',
-  'Renai Circulation',
-  'Rolling Girl feat. Hatsune Miku - Project DIVA Arcade Future Tone',
-  'ZUTOMAYO - Byoushinwo Kamu',
-  'Daidaidaidaidaikirai (BIGFIGHT REMIX)',
-  'ヨルシカ - 千鳥',
-  'ローリンガール - いおぎりょう Remix',
-  'ワールドイズマイン [CPK! Remix]',
-  '第六感 feat.東京ゲゲゲイ',
-  'Kenshi Yonezu - IRIS OUT',
-  'Kenshi Yonezu - KICK BACK (Frost Children Remix)',
-];
-
-const yiyuTitles = [
-  'REBEL HEART',
-  'HOT_',
-  'Hype Boy',
-  'Supernatural',
-  'BANG BANG',
-  '똑똑똑',
-  'Sticky',
-  'Cherish (My Love)',
-  'Cherish (My Love) (Moonlight Remix)',
-  'Do the Dance',
-  'Magnetic',
-  'OTT',
-  'OMG',
-];
-
 const shutingTitles = [
   'GAS GAS GAS',
   'HEYYEYAAEYAAAEYAEYAA',
@@ -86,7 +53,5 @@ const shutingTitles = [
 ];
 
 export const TRACK_LIBRARY = [
-  ...createTaggedTracks({ prefix: 'hoono', tag: 'hoono歌單', titles: hoonoTitles }),
-  ...createTaggedTracks({ prefix: 'yiyu', tag: '薏瑀歌單', titles: yiyuTitles }),
   ...createTaggedTracks({ prefix: 'shuting', tag: '輸婷歌單', titles: shutingTitles }),
 ];

@@ -4,6 +4,7 @@ export const ANALYSIS_STORAGE_KEY = 'flowdj.track-analysis.v2';
 
 export const buildTrackAnalysisEntry = (track, analysis) => ({
   bpm: analysis.bpm ?? track.bpm,
+  ...(Number.isFinite(analysis.beatOffset) ? { beatOffset: analysis.beatOffset } : {}),
   key: analysis.key ?? track.key,
   duration: analysis.duration,
   peaks: analysis.peaks,

@@ -14,9 +14,20 @@ assert.deepEqual(
   'S2 should expose the expected sample labels',
 );
 
+assert.deepEqual(
+  SAMPLE_BANKS.s3.map((sample) => sample.label),
+  ['HOW', 'DOG', 'OIIA'],
+  'S3 should expose the expected sample labels',
+);
+
 assert.ok(
   getSampleById('kick')?.src === '/samples/kick.wav',
   'sample lookup should return a production-safe public asset path',
+);
+
+assert.ok(
+  getSampleById('dog')?.src === '/samples/dog.mp3',
+  'S3 sample lookup should return the imported public sample path',
 );
 
 assert.equal(

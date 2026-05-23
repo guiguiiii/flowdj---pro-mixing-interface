@@ -1,6 +1,6 @@
 export const DEFAULT_WAVEFORM_PEAK_COUNT = 4096;
-export const TARGET_WAVEFORM_PEAKS_PER_SECOND = 64;
-export const MAX_WAVEFORM_PEAK_COUNT = 24000;
+export const TARGET_WAVEFORM_PEAKS_PER_SECOND = 40;
+export const MAX_WAVEFORM_PEAK_COUNT = 12000;
 export const EMPTY_WAVEFORM_PEAKS = Array.from({ length: DEFAULT_WAVEFORM_PEAK_COUNT }, () => ({ peak: 0, energy: 0, low: 0, mid: 0, high: 0 }));
 const NOTE_NAMES = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
 const MAJOR_PROFILE = [6.35, 2.23, 3.48, 2.33, 4.38, 4.09, 2.52, 5.19, 2.39, 3.66, 2.29, 2.88];
@@ -362,15 +362,47 @@ export const estimateBpmFromSamples = (samples, sampleRate) => {
   return bestBpm;
 };
 
-const goertzel = (samples, sampleRate, targetFrequency) => {
+export const estimateBeatOffsetFromSamples = (samples, sampleRate, bpm) => {
+  if (!Number.isFinite(bpm) || bpm <= 0 || samples.length === 0) {
+    return 0;
+  }
+
+  const blockSize = 1024;
+  const envelope = downsampleEnvelope(samples, blockSize);
+
+  if (envelope.length < 8) {
+    return 0;
+  }
+
+  const beatDuration = 60 / bpm;
+  const searchBlocks = Math.min(envelope.length, Math.ceil((beatDuration * 16 * sampleRate) / blockSize));
+  const meanEnergy = envelope.reduce((sum, value) => sum + value, 0) / envelope.length;
+  const threshold = meanEnergy * 1.35;
+
+  for (let index = 0; index < searchBlocks; index += 1) {
+    const previous = envelope[index - 1] ?? 0;
+    const current = envelope[index] ?? 0;
+    const next = envelope[index + 1] ?? 0;
+
+    if (current > threshold && current >= previous && current >= next) {
+      const onsetTime = (index * blockSize) / sampleRate;
+      return Number((onsetTime % beatDuration).toFixed(3));
+    }
+  }
+
+  return 0;
+};
+
+const goertzel = (samples, sampleRate, targetFrequency, start = 0, length = samples.length) => {
   const normalizedFrequency = targetFrequency / sampleRate;
   const omega = 2 * Math.PI * normalizedFrequency;
   const coefficient = 2 * Math.cos(omega);
+  const end = Math.min(start + length, samples.length);
   let q0 = 0;
   let q1 = 0;
   let q2 = 0;
 
-  for (let index = 0; index < samples.length; index += 1) {
+  for (let index = start; index < end; index += 1) {
     q0 = coefficient * q1 - q2 + samples[index];
     q2 = q1;
     q1 = q0;
@@ -390,15 +422,13 @@ export const estimateKeyFromSamples = (samples, sampleRate) => {
   const octaves = [2, 3, 4, 5, 6];
 
   for (let start = 0; start + chunkSize <= samples.length; start += hopSize) {
-    const slice = samples.slice(start, start + chunkSize);
-
     NOTE_NAMES.forEach((_, noteIndex) => {
       let energy = 0;
 
       octaves.forEach((octave) => {
         const midi = 12 * (octave + 1) + noteIndex;
         const frequency = 440 * Math.pow(2, (midi - 69) / 12);
-        energy += goertzel(slice, sampleRate, frequency);
+        energy += goertzel(samples, sampleRate, frequency, start, chunkSize);
       });
 
       chroma[noteIndex] += energy;
@@ -430,12 +460,64 @@ export const estimateKeyFromSamples = (samples, sampleRate) => {
   return bestMode === 'major' ? CAMELOT_MAJOR[noteName] : CAMELOT_MINOR[noteName];
 };
 
-export const analyzeDecodedTrack = (samples, sampleRate, peakCount = DEFAULT_WAVEFORM_PEAK_COUNT) => ({
-  duration: Number((samples.length / sampleRate).toFixed(3)),
-  bpm: estimateBpmFromSamples(samples, sampleRate),
-  key: estimateKeyFromSamples(samples, sampleRate),
-  peaks: buildWaveformPeaks(samples, peakCount),
-});
+export const analyzeDecodedTrack = (
+  samples,
+  sampleRate,
+  peakCount = DEFAULT_WAVEFORM_PEAK_COUNT,
+  options = {},
+) => {
+  const bpm = estimateBpmFromSamples(samples, sampleRate);
+
+  return {
+    duration: Number((samples.length / sampleRate).toFixed(3)),
+    bpm,
+    beatOffset: estimateBeatOffsetFromSamples(samples, sampleRate, bpm),
+    key: options.includeKey === false ? undefined : estimateKeyFromSamples(samples, sampleRate),
+    peaks: buildWaveformPeaks(samples, peakCount),
+  };
+};
+
+const analyzeSamplesInWorker = (samples, sampleRate, peakCount, options = {}) => {
+  if (typeof Worker === 'undefined') {
+    return Promise.resolve(analyzeDecodedTrack(samples, sampleRate, peakCount, options));
+  }
+
+  return new Promise((resolve, reject) => {
+    const worker = new Worker(new URL('./waveformAnalysisWorker.js', import.meta.url), {
+      type: 'module',
+    });
+    const timeoutId = window.setTimeout(() => {
+      worker.terminate();
+      reject(new Error('Waveform analysis timed out'));
+    }, 15000);
+
+    worker.onmessage = (event) => {
+      window.clearTimeout(timeoutId);
+      worker.terminate();
+
+      if (event.data?.type === 'analysis-complete') {
+        resolve(event.data.analysis);
+        return;
+      }
+
+      reject(new Error(event.data?.message ?? 'Waveform analysis failed'));
+    };
+
+    worker.onerror = (event) => {
+      window.clearTimeout(timeoutId);
+      worker.terminate();
+      reject(new Error(event.message || 'Waveform analysis worker failed'));
+    };
+
+    worker.postMessage({
+      type: 'analyze-samples',
+      samples,
+      sampleRate,
+      peakCount,
+      options,
+    }, [samples.buffer]);
+  });
+};
 
 export const getDisplayedWaveformPeaks = (peaks, displayCount) => {
   if (!Array.isArray(peaks) || peaks.length === 0) {
@@ -533,7 +615,7 @@ export const getWaveformBandWidths = (point, maxHalfWidth) => {
   };
 };
 
-export const analyzeTrackWaveform = async (src, peakCount) => {
+export const analyzeTrackWaveform = async (src, peakCount, options = {}) => {
   const response = await fetch(src);
 
   if (!response.ok) {
@@ -555,7 +637,7 @@ export const analyzeTrackWaveform = async (src, peakCount) => {
     const resolvedPeakCount = Number.isFinite(peakCount)
       ? peakCount
       : resolveWaveformPeakCount(audioBuffer.duration);
-    const analysis = analyzeDecodedTrack(merged, audioBuffer.sampleRate, resolvedPeakCount);
+    const analysis = await analyzeSamplesInWorker(merged, audioBuffer.sampleRate, resolvedPeakCount, options);
 
     return {
       ...analysis,

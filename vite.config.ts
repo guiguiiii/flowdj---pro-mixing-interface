@@ -2,12 +2,13 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig, loadEnv, searchForWorkspaceRoot} from 'vite';
+import {flowDjMonitorServer} from './src/monitorServer';
 
 export default defineConfig(({mode}) => {
   const env = loadEnv(mode, '.', '');
   const sampleDir = path.resolve(__dirname, '../../Sample');
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), flowDjMonitorServer()],
     define: {
       'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
     },

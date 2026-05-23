@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useEffect, useId, useRef, useState } from 'react';
+import React, { memo, useEffect, useId, useMemo, useRef, useState } from 'react';
 import { 
   SkipBack, 
   SkipForward, 
@@ -27,7 +27,6 @@ import {
   Plus,
   Minus,
   RotateCw,
-  Pencil,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Track } from './types';
@@ -70,7 +69,7 @@ import {
 } from './levelControl.js';
 import { TRACK_LIBRARY } from './trackLibrary.js';
 import { applyPadFx, clearPadFx, PAD_FX_BANKS } from './padFx.js';
-import { createLoopState, toggleLoopState } from './loop.js';
+import { createLoopState, getLoopPlaybackWrapTime, toggleLoopState } from './loop.js';
 import { SAMPLE_BANKS, SAMPLE_TRIGGER_MS } from './sample.js';
 import {
   analyzeTrackWaveform,
@@ -95,6 +94,19 @@ import {
   mergeImportedTracks,
 } from './localTracks.js';
 import { getDeckMixGains } from './mixer.js';
+import {
+  shouldRunActionOnPointerDown,
+  shouldSuppressClick,
+  TOUCH_CLICK_SUPPRESSION_MS,
+} from './multiTouchPress.js';
+import {
+  createDeckLoadMessage,
+  createDeckPlaybackMessage,
+  createMonitorClearMessage,
+  createMonitorSelectMessage,
+  createMonitorSyncMessage,
+  getNextMonitorDeckSelection,
+} from './remoteMonitor.js';
 import { getSyncPressAction, getSyncedPlaybackRate, SYNC_LONG_PRESS_MS } from './sync.js';
 import {
   getPlaybackRateFromTempoPercent,
@@ -108,7 +120,11 @@ import {
   getVerticalFaderHandleBottom,
   getVerticalFaderValueFromPointer,
 } from './crossfader.js';
-import { getKnobRotationDegrees, getKnobValueFromHorizontalDrag } from './knob.js';
+import {
+  getKnobPointerAngleDegrees,
+  getKnobRotationDegrees,
+  getKnobValueFromAngleDrag,
+} from './knob.js';
 
 const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: number }) => (
   <svg
@@ -127,16 +143,20 @@ const PlayPauseIcon = ({ width = 28, height = 18 }: { width?: number; height?: n
 );
 
 const transportPlayButtonClassName =
-  "w-14 h-10 rounded-[12px] flex items-center justify-center border border-white/10 bg-[#D0D0D0] shadow-[-2px_-2px_4px_rgba(78,78,78,0.12),2px_2px_4px_rgba(42,42,42,0.35)] transition-transform duration-150 hover:scale-[1.02] active:scale-95 active:shadow-[inset_-2px_-2px_4px_rgba(78,78,78,0.12),inset_2px_2px_4px_rgba(42,42,42,0.3)]";
+  "w-14 h-10 rounded-[12px] flex items-center justify-center border border-white/10 bg-[#D0D0D0] shadow-[-1px_-1px_2px_rgba(78,78,78,0.1),1px_2px_4px_rgba(42,42,42,0.28)] transition-transform duration-150 hover:scale-[1.02] active:scale-95 active:shadow-[inset_-1px_-1px_2px_rgba(78,78,78,0.1),inset_1px_1px_3px_rgba(42,42,42,0.25)]";
 const defaultDeckAudioState = { currentTime: 0, duration: 0, error: null as string | null };
+const createMixerKnobState = () => ({ hi: 50, mid: 50, low: 50 });
 const transportSecondaryButtonClassName =
-  "px-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-3 h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-8 rounded-xl flex items-center justify-center transition-all shadow-[2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e] active:shadow-[inset_2px_2px_4px_#2a2a2a,inset_-2px_-2px_4px_#4e4e4e] active:scale-95 border border-white/10";
+  "px-4 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-3 h-10 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-8 rounded-xl flex items-center justify-center transition-transform transition-colors duration-150 shadow-[1px_2px_3px_rgba(42,42,42,0.28),-1px_-1px_2px_rgba(78,78,78,0.5)] active:shadow-[inset_1px_1px_3px_rgba(42,42,42,0.28),inset_-1px_-1px_2px_rgba(78,78,78,0.45)] active:scale-95 border border-white/10";
+const LOOP_SEEK_COVER_MS = 140;
 const defaultWaveformState = {
   peaks: EMPTY_WAVEFORM_PEAKS,
   displayPeaks: EMPTY_WAVEFORM_PEAKS,
   duration: 0,
+  beatOffset: 0,
   status: 'idle' as 'idle' | 'loading' | 'ready' | 'error',
 };
+const AUDIO_READY_TIMEOUT_MS = 5000;
 const analysisWaveformPalette = {
   outer: '#1D6FFF',
   mid: '#C97A12',
@@ -144,6 +164,23 @@ const analysisWaveformPalette = {
   spine: '#FFF9EA',
 } as const;
 const getBrowserStorage = () => (typeof window === 'undefined' ? undefined : window.localStorage);
+const getIsIpadSafari = () => {
+  if (typeof navigator === 'undefined') {
+    return false;
+  }
+
+  const userAgent = navigator.userAgent;
+  const vendor = navigator.vendor;
+  const isTouchIpad = navigator.maxTouchPoints > 1
+    && (userAgent.includes('iPad') || userAgent.includes('Macintosh'));
+
+  return vendor.includes('Apple')
+    && userAgent.includes('Safari')
+    && isTouchIpad
+    && !userAgent.includes('CriOS')
+    && !userAgent.includes('EdgiOS')
+    && !userAgent.includes('FxiOS');
+};
 const getInitialAnalysisCache = () => loadTrackAnalysisCache(getBrowserStorage());
 const getInitialWaveformLibrary = () => {
   const cachedAnalysis = getInitialAnalysisCache();
@@ -158,6 +195,7 @@ const getInitialWaveformLibrary = () => {
           peaks,
           displayPeaks: shapeWaveformForDisplay(peaks),
           duration: analysis.duration ?? 0,
+          beatOffset: analysis.beatOffset ?? 0,
           status: 'ready' as const,
         },
       ];
@@ -184,6 +222,49 @@ type DeckAudioGraph = {
   reverbFeedback: GainNode,
   reverbWetGain: GainNode,
   outputGain: GainNode,
+};
+
+const waitForAudioReady = (audio: HTMLAudioElement, timeoutMs = AUDIO_READY_TIMEOUT_MS) => {
+  if (audio.readyState >= HTMLMediaElement.HAVE_CURRENT_DATA) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    let timeoutId: number | null = null;
+
+    const cleanup = () => {
+      audio.removeEventListener('canplay', handleReady);
+      audio.removeEventListener('loadeddata', handleReady);
+      audio.removeEventListener('error', handleError);
+
+      if (timeoutId != null) {
+        window.clearTimeout(timeoutId);
+      }
+    };
+
+    const handleReady = () => {
+      cleanup();
+      resolve();
+    };
+
+    const handleError = () => {
+      cleanup();
+      reject(audio.error ?? new Error('Audio failed to load'));
+    };
+
+    audio.addEventListener('canplay', handleReady, { once: true });
+    audio.addEventListener('loadeddata', handleReady, { once: true });
+    audio.addEventListener('error', handleError, { once: true });
+
+    timeoutId = window.setTimeout(() => {
+      cleanup();
+      reject(new Error('Audio load timed out'));
+    }, timeoutMs);
+
+    if (audio.networkState === HTMLMediaElement.NETWORK_EMPTY) {
+      audio.load();
+    }
+  });
 };
 
 const emphasizeWaveformContrast = (value: number, exponent = 1.8, floor = 0) => {
@@ -269,31 +350,6 @@ const buildVerticalWaveformLayerPath = (
   ].join(' ');
 };
 
-const getVerticalWaveformBandGradientStops = (peaks: WaveformPoint[]) => {
-  if (!peaks.length) {
-    return [
-      { offset: '0%', color: '#1D6FFF', opacity: 0.95 },
-      { offset: '100%', color: '#1D6FFF', opacity: 0.95 },
-    ];
-  }
-
-  return peaks.map((point, index) => {
-    const offset = peaks.length === 1 ? '0%' : `${((index / (peaks.length - 1)) * 100).toFixed(2)}%`;
-    const warmMix = Math.min(point.mid * 0.85 + point.high * 0.75, 1);
-    const coolMix = Math.min(point.low * 1.15 + point.energy * 0.35, 1);
-    const r = Math.round(25 + warmMix * 230);
-    const g = Math.round(96 + point.energy * 90 + point.mid * 35);
-    const b = Math.round(72 + coolMix * 175);
-    const opacity = Number((0.74 + point.peak * 0.24).toFixed(3));
-
-    return {
-      offset,
-      color: `rgb(${Math.min(r, 255)} ${Math.min(g, 255)} ${Math.min(b, 255)})`,
-      opacity,
-    };
-  });
-};
-
 // --- UI Components ---
 
 const Knob = ({ 
@@ -314,7 +370,8 @@ const Knob = ({
   onChange?: (val: number) => void; 
 }) => {
   const [isDragging, setIsDragging] = useState(false);
-  const startX = useRef(0);
+  const activePointerId = useRef<number | null>(null);
+  const startAngle = useRef(0);
   const startValue = useRef(0);
   const knobMetrics = size === 'sm'
     ? { shell: 46, labelClass: 'text-[8.5px]', dotOffsetY: 1.8 }
@@ -331,30 +388,53 @@ const Knob = ({
     'M42.6875 26.9864C44.383 26.9864 45.7575 25.6119 45.7575 23.9164C45.7575 22.2209 44.383 20.8464 42.6875 20.8464C40.992 20.8464 39.6175 22.2209 39.6175 23.9164C39.6175 25.6119 40.992 26.9864 42.6875 26.9864Z';
 
   const handlePointerDown = (e: React.PointerEvent) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+
     setIsDragging(true);
-    startX.current = e.clientX;
+    activePointerId.current = e.pointerId;
+    startAngle.current = getKnobPointerAngleDegrees({
+      centerX: rect.left + rect.width / 2,
+      centerY: rect.top + rect.height / 2,
+      pointerX: e.clientX,
+      pointerY: e.clientY,
+    });
     startValue.current = value;
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || activePointerId.current !== e.pointerId) return;
+    const rect = e.currentTarget.getBoundingClientRect();
+
     onChange(
-      getKnobValueFromHorizontalDrag({
+      getKnobValueFromAngleDrag({
         startValue: startValue.current,
-        startX: startX.current,
-        currentX: e.clientX,
+        startAngle: startAngle.current,
+        currentAngle: getKnobPointerAngleDegrees({
+          centerX: rect.left + rect.width / 2,
+          centerY: rect.top + rect.height / 2,
+          pointerX: e.clientX,
+          pointerY: e.clientY,
+        }),
       }),
     );
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    if (activePointerId.current !== e.pointerId) return;
+
     setIsDragging(false);
-    (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    activePointerId.current = null;
+    if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
+      (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
+    }
   };
 
   const handlePointerCancel = (e: React.PointerEvent) => {
+    if (activePointerId.current !== e.pointerId) return;
+
     setIsDragging(false);
+    activePointerId.current = null;
     if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     }
@@ -376,7 +456,7 @@ const Knob = ({
             style={{ transform: `rotate(${rotation}deg)` }}
           >
             <svg
-              className="absolute inset-0 h-full w-full overflow-visible drop-shadow-[0_4px_8px_rgba(0,0,0,0.22)]"
+              className="absolute inset-0 h-full w-full overflow-visible drop-shadow-[0_2px_4px_rgba(0,0,0,0.18)]"
               viewBox="0 0 86 82"
               aria-hidden="true"
             >
@@ -401,7 +481,7 @@ const Knob = ({
             </svg>
           </div>
         ) : (
-          <div className="w-full h-full rounded-full bg-[#D0D0D0] relative flex items-center justify-center shadow-[2px_2px_4px_rgba(0,0,0,0.2),-2px_-2px_4px_rgba(255,255,255,0.4)] pointer-events-none">
+          <div className="w-full h-full rounded-full bg-[#D0D0D0] relative flex items-center justify-center shadow-[1px_2px_3px_rgba(0,0,0,0.18),-1px_-1px_2px_rgba(255,255,255,0.36)] pointer-events-none">
             {/* Center-aligned indicator container */}
             <div
               className="absolute inset-0 flex items-start justify-center pt-2.5"
@@ -430,7 +510,7 @@ const FaderHandle = ({ color, orientation = 'vertical', size = 'md' }: { color: 
     : (size === 'sm' ? 'w-10 h-6' : size === 'md' ? 'w-12 h-8' : 'w-16 h-10');
 
   return (
-    <div className={`relative ${dims} bg-gradient-to-b from-[#F2F2F2] via-[#D0D0D0] to-[#B8B8B8] rounded-full border-[3px] shadow-[0_4px_12px_rgba(0,0,0,0.3)] flex items-center justify-center overflow-hidden transition-transform active:scale-95`} style={{ borderColor: color }}>
+    <div className={`relative ${dims} bg-gradient-to-b from-[#F2F2F2] via-[#D0D0D0] to-[#B8B8B8] rounded-full border-[3px] shadow-[0_2px_7px_rgba(0,0,0,0.24)] flex items-center justify-center overflow-hidden transition-transform active:scale-95`} style={{ borderColor: color }}>
       {/* Vertical center line */}
       <div className={`${isVertical ? 'w-[1.5px] h-1/2' : 'h-[1.5px] w-1/2'} rounded-full`} style={{ backgroundColor: color, opacity: 0.4 }} />
       {/* Glossy overlay */}
@@ -460,6 +540,7 @@ const VerticalFader = ({
   const trackRef = useRef<HTMLDivElement>(null);
   const handleRef = useRef<HTMLDivElement>(null);
   const [isDragging, setIsDragging] = useState(false);
+  const activePointerId = useRef<number | null>(null);
   const [faderMetrics, setFaderMetrics] = useState({ trackHeight: 0, handleHeight: 0 });
   const faderTravelInset = 4;
 
@@ -512,21 +593,29 @@ const VerticalFader = ({
 
   const handlePointerDown = (e: React.PointerEvent) => {
     setIsDragging(true);
+    activePointerId.current = e.pointerId;
     updateValueFromPointer(e.clientY);
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging) return;
+    if (!isDragging || activePointerId.current !== e.pointerId) return;
     updateValueFromPointer(e.clientY);
   };
 
   const handlePointerUp = (e: React.PointerEvent) => {
+    if (activePointerId.current !== e.pointerId) return;
+
     setIsDragging(false);
+    activePointerId.current = null;
 
     if ((e.currentTarget as HTMLElement).hasPointerCapture(e.pointerId)) {
       (e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId);
     }
+  };
+
+  const handlePointerCancel = (e: React.PointerEvent) => {
+    handlePointerUp(e);
   };
 
   const handleBottom = getVerticalFaderHandleBottom({
@@ -542,6 +631,7 @@ const VerticalFader = ({
       onPointerDown={handlePointerDown}
       onPointerMove={handlePointerMove}
       onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerCancel}
     >
       {/* Scale Lines */}
       <div className="absolute inset-0 flex flex-col justify-between py-6 px-3 pointer-events-none opacity-10">
@@ -566,7 +656,7 @@ const VerticalFader = ({
   );
 };
 
-const HorizontalWaveform = ({
+const HorizontalWaveform = memo(({
   peaks,
   progress,
   isAnalyzing,
@@ -585,9 +675,11 @@ const HorizontalWaveform = ({
 }) => {
   const width = 560;
   const height = 72;
-  const basePolygon = `0,${height} ${buildWaveformPoints(peaks, 'peak', width, height, 0.035, 1.55)} ${width},${height}`;
-  const innerPolygon = `0,${height} ${buildWaveformPoints(peaks, 'energy', width, height * 0.94, 0.015, 1.15)} ${width},${height}`;
-  const spikePolyline = buildWaveformSpikePoints(peaks, width, height * 0.92);
+  const { basePolygon, innerPolygon, spikePolyline } = useMemo(() => ({
+    basePolygon: `0,${height} ${buildWaveformPoints(peaks, 'peak', width, height, 0.035, 1.55)} ${width},${height}`,
+    innerPolygon: `0,${height} ${buildWaveformPoints(peaks, 'energy', width, height * 0.94, 0.015, 1.15)} ${width},${height}`,
+    spikePolyline: buildWaveformSpikePoints(peaks, width, height * 0.92),
+  }), [peaks]);
   const playedWidth = Math.max(progress * width, 0);
 
   return (
@@ -604,7 +696,7 @@ const HorizontalWaveform = ({
         <polygon points={innerPolygon} fill={analysisWaveformPalette.mid} opacity="0.92" />
         <polyline points={spikePolyline} fill="none" stroke={analysisWaveformPalette.core} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" opacity="0.98" />
       </svg>
-      <div className="absolute top-0 bottom-0 w-[2px] bg-[#FF4A4A] z-10 shadow-[0_0_10px_rgba(255,74,74,0.45)]" style={{ left: `calc(${progress * 100}% - 1px)` }} />
+      <div className="absolute top-0 bottom-0 w-[2px] bg-[#FF4A4A] z-10 shadow-[0_0_5px_rgba(255,74,74,0.3)]" style={{ left: `calc(${progress * 100}% - 1px)` }} />
       {isAnalyzing && (
         <div className="absolute inset-0 flex items-center justify-center text-[9px] font-bold uppercase tracking-[0.18em] text-white/45 bg-black/20">
           analyzing
@@ -612,9 +704,9 @@ const HorizontalWaveform = ({
       )}
     </div>
   );
-};
+});
 
-const VerticalWaveform = ({
+const VerticalWaveform = memo(({
   peaks,
   offset,
   isAnalyzing,
@@ -634,13 +726,10 @@ const VerticalWaveform = ({
   const rowStep = 10;
   const svgWidth = 164;
   const svgHeight = Math.max(peaks.length * rowStep, rowStep);
-  const gradientUid = useId();
   const centerX = svgWidth / 2;
   const maxHalfWidth = svgWidth / 2;
   const splitIndex = Math.floor(peaks.length / 2);
   const playbackRowIndex = Math.min(splitIndex, Math.max(peaks.length - 1, 0));
-  const pastPeaks = peaks.slice(0, playbackRowIndex + 1);
-  const futurePeaks = peaks.slice(playbackRowIndex);
   const buildSegmentPaths = (segmentPeaks: WaveformPoint[]) => {
     const widths = segmentPeaks.map((point) => getWaveformBandWidths(point, maxHalfWidth));
 
@@ -651,17 +740,22 @@ const VerticalWaveform = ({
       core: buildVerticalWaveformLayerPath(widths.map((item) => Math.min(item.core, item.mid * 0.58)), centerX, rowStep, 0.18),
     };
   };
-  const pastPaths = buildSegmentPaths(pastPeaks);
-  const futurePaths = buildSegmentPaths(futurePeaks);
-  const spinePoints = peaks
-    .map((point, index) => {
-      const y = index * rowStep;
-      const drift = (point.high - point.low) * (svgWidth * 0.028);
-      return `${(svgWidth / 2 + drift).toFixed(2)},${y.toFixed(2)}`;
-    })
-    .join(' ');
-  const gradientId = `vertical-waveform-${gradientUid.replace(/:/g, '')}`;
-  const gradientStops = getVerticalWaveformBandGradientStops(peaks);
+  const { pastPaths, futurePaths, spinePoints } = useMemo(() => {
+    const pastPeaks = peaks.slice(0, playbackRowIndex + 1);
+    const futurePeaks = peaks.slice(playbackRowIndex);
+
+    return {
+      pastPaths: buildSegmentPaths(pastPeaks),
+      futurePaths: buildSegmentPaths(futurePeaks),
+      spinePoints: peaks
+        .map((point, index) => {
+          const y = index * rowStep;
+          const drift = (point.high - point.low) * (svgWidth * 0.028);
+          return `${(svgWidth / 2 + drift).toFixed(2)},${y.toFixed(2)}`;
+        })
+        .join(' '),
+    };
+  }, [peaks, playbackRowIndex]);
   const translateY = getVerticalWaveformTranslateY(playbackRowIndex, rowStep, offset);
 
   return (
@@ -673,7 +767,7 @@ const VerticalWaveform = ({
       onPointerCancel={onPointerCancel}
     >
       <div className="absolute inset-x-0 top-0 bottom-0 pointer-events-none">
-        <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 bg-[#FF4A4A] shadow-[0_0_8px_rgba(255,74,74,0.35)]" />
+        <div className="absolute left-0 right-0 top-1/2 h-[2px] -translate-y-1/2 bg-[#FF4A4A] shadow-[0_0_4px_rgba(255,74,74,0.26)]" />
         <div className="absolute left-0 right-0 top-1/4 h-px bg-white/55" />
         <div className="absolute left-0 right-0 top-3/4 h-px bg-white/55" />
       </div>
@@ -689,26 +783,14 @@ const VerticalWaveform = ({
             className="block w-full"
             style={{ height: `${svgHeight}px` }}
           >
-            <defs>
-              <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2={svgHeight} gradientUnits="userSpaceOnUse">
-                {gradientStops.map((stop) => (
-                  <stop
-                    key={`${gradientId}-${stop.offset}`}
-                    offset={stop.offset}
-                    stopColor={stop.color}
-                    stopOpacity={stop.opacity}
-                  />
-                ))}
-              </linearGradient>
-            </defs>
             <g>
-              <path d={pastPaths.outer} fill={`url(#${gradientId})`} opacity="0.98" />
+              <path d={pastPaths.outer} fill="#185CFF" opacity="0.92" />
               <path d={pastPaths.bass} fill="#0D63FF" opacity="0.84" />
               <path d={pastPaths.mid} fill="#D58A18" opacity="0.94" />
               <path d={pastPaths.core} fill="#FFF4D9" opacity="0.99" />
             </g>
             <g transform={`translate(0 ${(playbackRowIndex * rowStep).toFixed(2)})`}>
-              <path d={futurePaths.outer} fill={`url(#${gradientId})`} opacity="0.98" />
+              <path d={futurePaths.outer} fill="#185CFF" opacity="0.86" />
               <path d={futurePaths.bass} fill="#0D63FF" opacity="0.84" />
               <path d={futurePaths.mid} fill="#D58A18" opacity="0.94" />
               <path d={futurePaths.core} fill="#FFF4D9" opacity="0.99" />
@@ -727,7 +809,7 @@ const VerticalWaveform = ({
       )}
     </div>
   );
-};
+});
 
 const DeckDisplay = ({
   color,
@@ -740,6 +822,10 @@ const DeckDisplay = ({
   progress,
   title,
   artist,
+  monitorDeck,
+  isMonitorSelected = false,
+  monitorPlacement = 'right',
+  onMonitorToggle,
   isJogDragging = false,
   onJogPointerDown,
   onJogPointerMove,
@@ -756,6 +842,10 @@ const DeckDisplay = ({
   progress: number,
   title: string,
   artist: string,
+  monitorDeck: 'A' | 'B',
+  isMonitorSelected?: boolean,
+  monitorPlacement?: 'left' | 'right',
+  onMonitorToggle?: () => void,
   isJogDragging?: boolean,
   onJogPointerDown?: React.PointerEventHandler<HTMLDivElement>,
   onJogPointerMove?: React.PointerEventHandler<HTMLDivElement>,
@@ -769,10 +859,25 @@ const DeckDisplay = ({
 
   return (
     <div className="flex flex-col items-center justify-center gap-1 w-full h-full relative p-1 min-w-0">
+      <button
+        type="button"
+        onPointerDown={(event) => event.stopPropagation()}
+        onClick={(event) => {
+          event.stopPropagation();
+          onMonitorToggle?.();
+        }}
+        className={`ipad-only absolute top-[clamp(22px,12%,54px)] ${monitorPlacement === 'left' ? 'left-[clamp(18px,13%,68px)]' : 'right-[clamp(18px,13%,68px)]'} z-20 h-10 min-w-10 rounded-full border border-black/10 bg-[#E0E0E0] px-3 text-[13px] font-black uppercase tracking-[0.08em] shadow-[1px_2px_4px_rgba(0,0,0,0.18),-1px_-1px_2px_rgba(255,255,255,0.55)] transition-transform transition-colors duration-150 active:scale-95 ${isMonitorSelected ? 'ring-1 ring-offset-2 ring-offset-[#D0D0D0]' : 'text-black/55'}`}
+        style={isMonitorSelected ? { color, boxShadow: `0 0 9px ${color}40, 1px 2px 4px rgba(0,0,0,0.18), -1px -1px 2px rgba(255,255,255,0.55)` } : undefined}
+        aria-pressed={isMonitorSelected}
+        aria-label={isMonitorSelected ? `Turn deck ${monitorDeck} monitor off` : `Monitor deck ${monitorDeck}`}
+      >
+        {monitorDeck}
+      </button>
+
       {/* Circular Data Meter - Enlarged by another 20% while keeping container height fixed */}
       <div
         data-jog-wheel
-        className={`relative w-[150px] h-[150px] md:w-[165px] md:h-[165px] xl:w-[185px] xl:h-[185px] rounded-full neu-convex border-[5px] xl:border-[6px] border-[#D1D1D1] flex flex-col items-center justify-center shadow-xl overflow-visible shrink-0 select-none touch-none ${isJogDragging ? 'cursor-grabbing shadow-[inset_0_0_16px_rgba(255,148,87,0.18),0_10px_28px_rgba(0,0,0,0.22)]' : 'cursor-grab'}`}
+        className={`relative w-[150px] h-[150px] md:w-[165px] md:h-[165px] xl:w-[185px] xl:h-[185px] rounded-full neu-convex border-[5px] xl:border-[6px] border-[#D1D1D1] flex flex-col items-center justify-center overflow-visible shrink-0 select-none touch-none ${isJogDragging ? 'cursor-grabbing shadow-[inset_0_0_10px_rgba(255,148,87,0.14),0_5px_16px_rgba(0,0,0,0.18)]' : 'cursor-grab shadow-[0_3px_8px_rgba(0,0,0,0.16)]'}`}
         style={{ touchAction: 'none' }}
         onPointerDown={onJogPointerDown}
         onPointerMove={onJogPointerMove}
@@ -800,7 +905,7 @@ const DeckDisplay = ({
                     width: orbitDotSize,
                     height: orbitDotSize,
                     backgroundColor: color,
-                    boxShadow: isJogDragging ? `0 0 18px ${color}, 0 0 26px ${color}88` : `0 0 10px ${color}`,
+                    boxShadow: isJogDragging ? `0 0 10px ${color}cc, 0 0 16px ${color}55` : `0 0 6px ${color}aa`,
                     scale: `${isJogDragging ? 1.18 : 1}`,
                     left: '50%',
                     top: '50%',
@@ -844,13 +949,12 @@ const DeckDisplay = ({
           strokeOpacity="0.2"
         />
         {/* Active Progress */}
-        <motion.circle 
+        <circle 
           cx="50" cy="50" r="48.5" 
           fill="none" stroke={color} strokeWidth="1.5" 
           strokeDasharray="304.7" 
-          animate={{ strokeDashoffset: progressDashOffset }}
+          strokeDashoffset={progressDashOffset}
           strokeLinecap="round"
-          className="transition-all duration-1000"
           style={{ rotate: -90, transformOrigin: '50% 50%' }}
         />
       </svg>
@@ -858,20 +962,6 @@ const DeckDisplay = ({
     </div>
   );
 };
-
-const VUMeter = ({ color, active }: { color: string, active: boolean }) => (
-  <div className="w-2 h-full bg-black/60 border-x border-white/5 relative overflow-hidden">
-    <motion.div 
-      className="absolute bottom-0 w-full"
-      animate={{ height: active ? ["20%", "80%", "40%", "90%", "30%"] : "10%" }}
-      transition={{ repeat: Infinity, duration: 0.2 }}
-      style={{ 
-        background: `linear-gradient(to top, #ff0000, ${color})`,
-        boxShadow: active ? `0 0 10px ${color}` : 'none'
-      }}
-    />
-  </div>
-);
 
 const MusicLibraryModal = ({
   deck,
@@ -907,8 +997,8 @@ const MusicLibraryModal = ({
   }, [activeTag, tagOptions]);
 
   return (
-    <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/65 backdrop-blur-sm px-4">
-      <div className="w-full max-w-xl rounded-[28px] border border-white/10 bg-[#2E2E2E] shadow-[0_20px_60px_rgba(0,0,0,0.45)] overflow-hidden">
+    <div className="absolute inset-0 z-[80] flex items-center justify-center bg-black/68 px-4">
+      <div className="w-full max-w-xl rounded-[24px] border border-white/10 bg-[#2E2E2E] shadow-[0_14px_34px_rgba(0,0,0,0.36)] overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-white/10 bg-[#383838]">
           <div>
             <div className="text-[11px] font-bold uppercase tracking-[0.22em] text-white/45">Deck {deck}</div>
@@ -991,6 +1081,7 @@ const MusicLibraryModal = ({
 // --- Main Application ---
 
 export default function App() {
+  const isIpadSafari = useMemo(() => getIsIpadSafari(), []);
   const [libraryTracks, setLibraryTracks] = useState<Track[]>(() => hydrateTracksWithAnalysis(TRACK_LIBRARY, getInitialAnalysisCache()));
   const [trackAId, setTrackAId] = useState(TRACK_LIBRARY[0]?.id ?? '');
   const [trackBId, setTrackBId] = useState(TRACK_LIBRARY[1]?.id ?? TRACK_LIBRARY[0]?.id ?? '');
@@ -1004,10 +1095,20 @@ export default function App() {
   const [crossfader, setCrossfader] = useState(50);
   const [playbackRateA, setPlaybackRateA] = useState(1);
   const [playbackRateB, setPlaybackRateB] = useState(1);
+  const [selectedMonitorDeck, setSelectedMonitorDeck] = useState<'A' | 'B' | null>(null);
+  const [monitorStatus, setMonitorStatus] = useState({
+    connected: false,
+    monitors: 0,
+  });
   const audioRefA = useRef<HTMLAudioElement>(null);
   const audioRefB = useRef<HTMLAudioElement>(null);
+  const monitorSocketRef = useRef<WebSocket | null>(null);
+  const monitorSyncRef = useRef<(() => void) | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const deckAudioGraphRef = useRef<{ A: DeckAudioGraph | null; B: DeckAudioGraph | null }>({ A: null, B: null });
+  const loopCoverAudioRef = useRef<{ A: HTMLAudioElement | null; B: HTMLAudioElement | null }>({ A: null, B: null });
+  const loopCoverSourceRef = useRef<{ A: MediaElementAudioSourceNode | null; B: MediaElementAudioSourceNode | null }>({ A: null, B: null });
+  const loopCoverTimeoutRef = useRef<{ A: number | null; B: number | null }>({ A: null, B: null });
   const activePadFxRuntimeRef = useRef<{ A: { padId: string, playbackRate: number } | null; B: { padId: string, playbackRate: number } | null }>({ A: null, B: null });
   const sampleTriggerTimeoutRef = useRef<{ A: number | null; B: number | null }>({ A: null, B: null });
   const activeSampleAudioRef = useRef<{ A: HTMLAudioElement[]; B: HTMLAudioElement[] }>({ A: [], B: [] });
@@ -1015,26 +1116,31 @@ export default function App() {
   const syncPressStartedAtRef = useRef<{ A: number; B: number }>({ A: 0, B: 0 });
   const syncLongPressTriggeredRef = useRef<{ A: boolean; B: boolean }>({ A: false, B: false });
   const syncSuppressClickRef = useRef<{ A: boolean; B: boolean }>({ A: false, B: false });
+  const touchPressSuppressClickUntilRef = useRef(0);
   const crossfaderRef = useRef<HTMLDivElement>(null);
   const crossfaderHandleRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const localTrackUrlsRef = useRef(new Set<string>());
-  const horizontalWaveformDragRef = useRef<{
-    deck: 'A' | 'B' | null,
-    pointerId: number | null,
-  }>({ deck: null, pointerId: null });
-  const verticalWaveformDragRef = useRef<{
-    deck: 'A' | 'B' | null,
+  const horizontalWaveformDragRef = useRef<Record<'A' | 'B', { pointerId: number | null }>>({
+    A: { pointerId: null },
+    B: { pointerId: null },
+  });
+  const verticalWaveformDragRef = useRef<Record<'A' | 'B', {
     pointerId: number | null,
     startY: number,
     startTime: number,
-  }>({ deck: null, pointerId: null, startY: 0, startTime: 0 });
-  const jogDotDragRef = useRef<{
-    deck: 'A' | 'B' | null,
+  }>>({
+    A: { pointerId: null, startY: 0, startTime: 0 },
+    B: { pointerId: null, startY: 0, startTime: 0 },
+  });
+  const jogDotDragRef = useRef<Record<'A' | 'B', {
     pointerId: number | null,
     lastAngleDeg: number,
     wasPlaying: boolean,
-  }>({ deck: null, pointerId: null, lastAngleDeg: 0, wasPlaying: false });
+  }>>({
+    A: { pointerId: null, lastAngleDeg: 0, wasPlaying: false },
+    B: { pointerId: null, lastAngleDeg: 0, wasPlaying: false },
+  });
   const jogRotationFrameRef = useRef<{ A: number | null; B: number | null }>({ A: null, B: null });
   const jogRotationTimestampRef = useRef<{ A: number | null; B: number | null }>({ A: null, B: null });
   const [jogRotationA, setJogRotationA] = useState(0);
@@ -1042,6 +1148,7 @@ export default function App() {
   const [isJogDotDraggingA, setIsJogDotDraggingA] = useState(false);
   const [isJogDotDraggingB, setIsJogDotDraggingB] = useState(false);
   const [isCrossfaderDragging, setIsCrossfaderDragging] = useState(false);
+  const crossfaderPointerIdRef = useRef<number | null>(null);
   const [crossfaderMetrics, setCrossfaderMetrics] = useState({ trackWidth: 0, handleWidth: 0 });
   const analyzedTrackIdsRef = useRef(new Set(Object.keys(getInitialAnalysisCache())));
   const [searchQuery, setSearchQuery] = useState('');
@@ -1052,10 +1159,32 @@ export default function App() {
   const [modeB, setModeB] = useState('Mixer');
   const panelModes = ['FX', 'Mixer', 'Level'];
 
+  const getMultiTouchPressHandlers = <Element extends HTMLElement>(
+    action: () => void,
+  ) => ({
+    onPointerDown: (event: React.PointerEvent<Element>) => {
+      if (!shouldRunActionOnPointerDown(event)) {
+        return;
+      }
+
+      event.preventDefault();
+      touchPressSuppressClickUntilRef.current = Date.now() + TOUCH_CLICK_SUPPRESSION_MS;
+      action();
+    },
+    onClick: (event: React.MouseEvent<Element>) => {
+      if (shouldSuppressClick({ now: Date.now(), suppressUntil: touchPressSuppressClickUntilRef.current })) {
+        event.preventDefault();
+        return;
+      }
+
+      action();
+    },
+  });
+
   // Mixer & FX States
-  const [mixerA, setMixerA] = useState({ hi: 50, mid: 50, low: 50 });
+  const [mixerA, setMixerA] = useState(createMixerKnobState);
   const [fxA, setFxA] = useState(createFxKnobState);
-  const [mixerB, setMixerB] = useState({ hi: 50, mid: 50, low: 50 });
+  const [mixerB, setMixerB] = useState(createMixerKnobState);
   const [fxB, setFxB] = useState(createFxKnobState);
   const [deckVolumesA, setDeckVolumesA] = useState(() => createDeckVolumeGroups(80));
   const [deckVolumesB, setDeckVolumesB] = useState(() => createDeckVolumeGroups(80));
@@ -1069,8 +1198,8 @@ export default function App() {
   const [hotCueBankB, setHotCueBankB] = useState<'cue1' | 'cue2'>('cue1');
   const [padFxBankA, setPadFxBankA] = useState<'fx1' | 'fx2'>('fx1');
   const [padFxBankB, setPadFxBankB] = useState<'fx1' | 'fx2'>('fx1');
-  const [sampleBankA, setSampleBankA] = useState<'s1' | 's2'>('s1');
-  const [sampleBankB, setSampleBankB] = useState<'s1' | 's2'>('s1');
+  const [sampleBankA, setSampleBankA] = useState<'s1' | 's2' | 's3'>('s1');
+  const [sampleBankB, setSampleBankB] = useState<'s1' | 's2' | 's3'>('s1');
   const [activePadFxA, setActivePadFxA] = useState<string | null>(null);
   const [activePadFxB, setActivePadFxB] = useState<string | null>(null);
   const [activeSampleA, setActiveSampleA] = useState<string | null>(null);
@@ -1144,6 +1273,68 @@ export default function App() {
     return graph;
   };
 
+  const ensureLoopCoverAudio = (deck: 'A' | 'B') => {
+    const track = deck === 'A' ? trackA : trackB;
+
+    if (!track?.src) {
+      return null;
+    }
+
+    let coverAudio = loopCoverAudioRef.current[deck];
+
+    if (!coverAudio || coverAudio.src !== new URL(track.src, window.location.href).href) {
+      if (loopCoverTimeoutRef.current[deck] != null) {
+        window.clearTimeout(loopCoverTimeoutRef.current[deck] as number);
+        loopCoverTimeoutRef.current[deck] = null;
+      }
+
+      loopCoverSourceRef.current[deck]?.disconnect();
+      loopCoverSourceRef.current[deck] = null;
+      coverAudio?.pause();
+
+      coverAudio = new Audio(track.src);
+      coverAudio.preload = 'auto';
+      loopCoverAudioRef.current[deck] = coverAudio;
+      coverAudio.load();
+    }
+
+    const graph = deckAudioGraphRef.current[deck];
+    const context = audioContextRef.current;
+
+    if (graph && context && !loopCoverSourceRef.current[deck]) {
+      const coverSource = context.createMediaElementSource(coverAudio);
+      coverSource.connect(graph.lowFilter);
+      loopCoverSourceRef.current[deck] = coverSource;
+      coverAudio.volume = 1;
+    }
+
+    return coverAudio;
+  };
+
+  const coverLoopSeekGap = (deck: 'A' | 'B', wrapTime: number) => {
+    const mainAudio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const coverAudio = ensureLoopCoverAudio(deck);
+
+    if (!mainAudio || !coverAudio || !Number.isFinite(wrapTime)) {
+      return;
+    }
+
+    if (loopCoverTimeoutRef.current[deck] != null) {
+      window.clearTimeout(loopCoverTimeoutRef.current[deck] as number);
+      loopCoverTimeoutRef.current[deck] = null;
+    }
+
+    coverAudio.pause();
+    coverAudio.currentTime = Math.max(wrapTime, 0);
+    coverAudio.playbackRate = mainAudio.playbackRate;
+    void coverAudio.play().catch(() => {});
+
+    loopCoverTimeoutRef.current[deck] = window.setTimeout(() => {
+      coverAudio.pause();
+      loopCoverTimeoutRef.current[deck] = null;
+    }, LOOP_SEEK_COVER_MS);
+  };
+
   const getDeckMixerState = (deck: 'A' | 'B') => (deck === 'A' ? mixerA : mixerB);
   const getDeckFxState = (deck: 'A' | 'B') => (deck === 'A' ? fxA : fxB);
 
@@ -1169,6 +1360,10 @@ export default function App() {
   };
 
   const getDeckTrackGain = (deck: 'A' | 'B') => {
+    if (selectedMonitorDeck === deck) {
+      return 0;
+    }
+
     const gains = getDeckMixGains({
       crossfader,
       levelA: deckVolumesA.track,
@@ -1178,17 +1373,229 @@ export default function App() {
     return deck === 'A' ? gains.deckA : gains.deckB;
   };
 
+  const applyDeckOutputGain = (deck: 'A' | 'B') => {
+    const gain = getDeckTrackGain(deck);
+    const context = audioContextRef.current;
+    const graph = deckAudioGraphRef.current[deck];
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const loopCoverAudio = loopCoverAudioRef.current[deck];
+
+    if (selectedMonitorDeck === deck && loopCoverAudio) {
+      loopCoverAudio.pause();
+      loopCoverAudio.volume = 0;
+    } else if (loopCoverAudio) {
+      loopCoverAudio.volume = graph ? 1 : gain;
+    }
+
+    if (graph && context) {
+      graph.outputGain.gain.setTargetAtTime(gain, context.currentTime, 0.01);
+      return;
+    }
+
+    if (audio) {
+      audio.volume = gain;
+    }
+  };
+
+  const getDeckMonitorSnapshot = (deck: 'A' | 'B') => {
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+    const track = deck === 'A' ? trackA : trackB;
+    const playbackRate = deck === 'A' ? playbackRateA : playbackRateB;
+
+    return {
+      deck,
+      track,
+      currentTime: audio?.currentTime ?? (deck === 'A' ? audioStateA.currentTime : audioStateB.currentTime),
+      playbackRate,
+      isPlaying: Boolean(audio && !audio.paused),
+    };
+  };
+
+  const sendMonitorMessage = (message: unknown) => {
+    const socket = monitorSocketRef.current;
+
+    if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+      return;
+    }
+
+    if (!socket || socket.readyState !== WebSocket.OPEN) {
+      return;
+    }
+
+    socket.send(JSON.stringify(message));
+  };
+
+  const sendDeckMonitorLoad = (deck: 'A' | 'B') => {
+    sendMonitorMessage(createDeckLoadMessage(getDeckMonitorSnapshot(deck)));
+  };
+
+  const sendDeckMonitorPlayback = (
+    deck: 'A' | 'B',
+    action: 'play' | 'pause' | 'seek' | 'rate',
+    overrides: { currentTime?: number; playbackRate?: number } = {},
+  ) => {
+    const snapshot = getDeckMonitorSnapshot(deck);
+
+    sendMonitorMessage(createDeckPlaybackMessage({
+      deck,
+      action,
+      currentTime: overrides.currentTime ?? snapshot.currentTime,
+      playbackRate: overrides.playbackRate ?? snapshot.playbackRate,
+    }));
+  };
+
+  const sendSelectedMonitorSync = () => {
+    if (!selectedMonitorDeck) {
+      return;
+    }
+
+    const snapshot = getDeckMonitorSnapshot(selectedMonitorDeck);
+
+    sendMonitorMessage(createMonitorSyncMessage({
+      selectedDeck: selectedMonitorDeck,
+      ...snapshot,
+    }));
+  };
+
+  monitorSyncRef.current = sendSelectedMonitorSync;
+
+  const handleMonitorDeckSelect = (deck: 'A' | 'B') => {
+    const nextDeck = getNextMonitorDeckSelection(selectedMonitorDeck, deck) as 'A' | 'B' | null;
+
+    setSelectedMonitorDeck(nextDeck);
+
+    if (nextDeck == null) {
+      sendMonitorMessage(createMonitorClearMessage());
+      return;
+    }
+
+    sendMonitorMessage(createMonitorSelectMessage(nextDeck));
+    sendMonitorMessage(createDeckLoadMessage(getDeckMonitorSnapshot(nextDeck)));
+  };
+
+  const openMonitorWindow = () => {
+    window.open('/monitor', 'flowdj-monitor', 'noopener,noreferrer');
+  };
+
   const handleTempoFaderChange = (deck: 'A' | 'B', sliderValue: number) => {
     const tempoPercent = getTempoPercentFromSliderValue(sliderValue);
     const nextPlaybackRate = getPlaybackRateFromTempoPercent(tempoPercent);
+    const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
+
+    if (audio) {
+      audio.playbackRate = nextPlaybackRate;
+    }
+
+    applyDeckOutputGain(deck);
 
     if (deck === 'A') {
       setPlaybackRateA(nextPlaybackRate);
+      sendDeckMonitorPlayback(deck, 'rate', { playbackRate: nextPlaybackRate });
       return;
     }
 
     setPlaybackRateB(nextPlaybackRate);
+    sendDeckMonitorPlayback(deck, 'rate', { playbackRate: nextPlaybackRate });
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') {
+      return () => {};
+    }
+
+    let reconnectTimer: number | null = null;
+    let isClosed = false;
+
+    const connect = () => {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const socket = new WebSocket(`${protocol}//${window.location.host}/flowdj-monitor?role=controller`);
+      monitorSocketRef.current = socket;
+
+      socket.addEventListener('open', () => {
+        setMonitorStatus((prev) => ({
+          ...prev,
+          connected: true,
+        }));
+        if (selectedMonitorDeck) {
+          sendMonitorMessage(createMonitorSelectMessage(selectedMonitorDeck));
+          sendSelectedMonitorSync();
+        } else {
+          sendMonitorMessage(createMonitorClearMessage());
+        }
+      });
+
+      socket.addEventListener('message', (event) => {
+        try {
+          const message = JSON.parse(event.data);
+
+          if (message.type === 'monitor-status') {
+            setMonitorStatus({
+              connected: true,
+              monitors: Number(message.monitors ?? 0),
+            });
+
+            if (Number(message.monitors ?? 0) > 0) {
+              if (selectedMonitorDeck) {
+                sendMonitorMessage(createMonitorSelectMessage(selectedMonitorDeck));
+                sendSelectedMonitorSync();
+              } else {
+                sendMonitorMessage(createMonitorClearMessage());
+              }
+            }
+          }
+        } catch {
+          // Ignore non-protocol messages from browser extensions or proxies.
+        }
+      });
+
+      socket.addEventListener('close', () => {
+        if (monitorSocketRef.current === socket) {
+          monitorSocketRef.current = null;
+        }
+
+        setMonitorStatus((prev) => ({
+          ...prev,
+          connected: false,
+        }));
+
+        if (!isClosed) {
+          reconnectTimer = window.setTimeout(connect, 1200);
+        }
+      });
+    };
+
+    connect();
+
+    return () => {
+      isClosed = true;
+
+      if (reconnectTimer != null) {
+        window.clearTimeout(reconnectTimer);
+      }
+
+      monitorSocketRef.current?.close();
+      monitorSocketRef.current = null;
+    };
+  }, []);
+
+  useEffect(() => {
+    const syncTimer = window.setInterval(() => {
+      monitorSyncRef.current?.();
+    }, 3000);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        monitorSyncRef.current?.();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.clearInterval(syncTimer);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, []);
 
   useEffect(() => {
     const updateCrossfaderMetrics = () => {
@@ -1233,7 +1640,8 @@ export default function App() {
       }));
 
       try {
-        const analysis = await analyzeTrackWaveform(track.src);
+        await new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve()));
+        const analysis = await analyzeTrackWaveform(track.src, undefined, { includeKey: false });
         const nextEntry = buildTrackAnalysisEntry(track, analysis);
         const displayPeaks = shapeWaveformForDisplay(analysis.peaks);
 
@@ -1243,13 +1651,14 @@ export default function App() {
             peaks: analysis.peaks,
             displayPeaks,
             duration: analysis.duration,
+            beatOffset: analysis.beatOffset ?? 0,
             status: 'ready',
           },
         }));
         setLibraryTracks((prev) => updateTrackInLibrary(prev, track.id, {
           duration: formatClock(analysis.duration),
           bpm: analysis.bpm,
-          key: analysis.key,
+          key: analysis.key ?? track.key,
         }));
         saveTrackAnalysisCache(getBrowserStorage(), {
           ...loadTrackAnalysisCache(getBrowserStorage()),
@@ -1266,12 +1675,12 @@ export default function App() {
       }
     };
 
-    libraryTracks.forEach((track) => {
+    [trackA, trackB].filter(Boolean).forEach((track) => {
       if (analyzedTrackIdsRef.current.has(track.id)) {
         return;
       }
 
-      if (cachedAnalysis[track.id]) {
+      if (cachedAnalysis[track.id] && Number.isFinite(cachedAnalysis[track.id].beatOffset)) {
         analyzedTrackIdsRef.current.add(track.id);
         const peaks = normalizeWaveformPeaks(cachedAnalysis[track.id].peaks, EMPTY_WAVEFORM_PEAKS.length);
         setWaveformLibrary((prev) => ({
@@ -1280,6 +1689,7 @@ export default function App() {
             peaks,
             displayPeaks: shapeWaveformForDisplay(peaks),
             duration: cachedAnalysis[track.id].duration ?? 0,
+            beatOffset: cachedAnalysis[track.id].beatOffset ?? 0,
             status: 'ready',
           },
         }));
@@ -1289,7 +1699,7 @@ export default function App() {
       analyzedTrackIdsRef.current.add(track.id);
       void analyzeTrack(track);
     });
-  }, [libraryTracks]);
+  }, [trackA, trackB]);
 
   useEffect(() => {
     const syncDeck = (
@@ -1372,28 +1782,58 @@ export default function App() {
 
   useEffect(() => {
     let frameId = 0;
+    let lastUiUpdateAt = 0;
+    const uiUpdateIntervalMs = 180;
 
-    const tick = () => {
+    const tick = (timestamp: number) => {
       if (audioRefA.current && !audioRefA.current.paused) {
-        if (loopStateA.activeLoop && loopStateA.loopStart !== null && loopStateA.loopEnd !== null && audioRefA.current.currentTime >= loopStateA.loopEnd) {
-          audioRefA.current.currentTime = loopStateA.loopStart;
+        if (loopStateA.activeLoop && loopStateA.loopStart !== null && loopStateA.loopEnd !== null) {
+          const wrapTime = getLoopPlaybackWrapTime({
+            currentTime: audioRefA.current.currentTime,
+            loopStart: loopStateA.loopStart,
+            loopEnd: loopStateA.loopEnd,
+          });
+
+          if (wrapTime !== null) {
+            coverLoopSeekGap('A', wrapTime);
+            audioRefA.current.currentTime = wrapTime;
+          }
         }
-        setAudioStateA((prev) => ({
-          ...prev,
-          currentTime: audioRefA.current?.currentTime ?? prev.currentTime,
-          duration: Number.isFinite(audioRefA.current?.duration) ? audioRefA.current.duration : prev.duration,
-        }));
       }
 
       if (audioRefB.current && !audioRefB.current.paused) {
-        if (loopStateB.activeLoop && loopStateB.loopStart !== null && loopStateB.loopEnd !== null && audioRefB.current.currentTime >= loopStateB.loopEnd) {
-          audioRefB.current.currentTime = loopStateB.loopStart;
+        if (loopStateB.activeLoop && loopStateB.loopStart !== null && loopStateB.loopEnd !== null) {
+          const wrapTime = getLoopPlaybackWrapTime({
+            currentTime: audioRefB.current.currentTime,
+            loopStart: loopStateB.loopStart,
+            loopEnd: loopStateB.loopEnd,
+          });
+
+          if (wrapTime !== null) {
+            coverLoopSeekGap('B', wrapTime);
+            audioRefB.current.currentTime = wrapTime;
+          }
         }
-        setAudioStateB((prev) => ({
-          ...prev,
-          currentTime: audioRefB.current?.currentTime ?? prev.currentTime,
-          duration: Number.isFinite(audioRefB.current?.duration) ? audioRefB.current.duration : prev.duration,
-        }));
+      }
+
+      if (timestamp - lastUiUpdateAt >= uiUpdateIntervalMs) {
+        lastUiUpdateAt = timestamp;
+
+        if (audioRefA.current && !audioRefA.current.paused) {
+          setAudioStateA((prev) => ({
+            ...prev,
+            currentTime: audioRefA.current?.currentTime ?? prev.currentTime,
+            duration: Number.isFinite(audioRefA.current?.duration) ? audioRefA.current.duration : prev.duration,
+          }));
+        }
+
+        if (audioRefB.current && !audioRefB.current.paused) {
+          setAudioStateB((prev) => ({
+            ...prev,
+            currentTime: audioRefB.current?.currentTime ?? prev.currentTime,
+            duration: Number.isFinite(audioRefB.current?.duration) ? audioRefB.current.duration : prev.duration,
+          }));
+        }
       }
 
       frameId = window.requestAnimationFrame(tick);
@@ -1405,7 +1845,6 @@ export default function App() {
       window.cancelAnimationFrame(frameId);
     };
   }, [loopStateA.activeLoop, loopStateA.loopEnd, loopStateA.loopStart, loopStateB.activeLoop, loopStateB.loopEnd, loopStateB.loopStart]);
-
   useEffect(() => () => {
     localTrackUrlsRef.current.forEach((url) => {
       URL.revokeObjectURL(url);
@@ -1414,11 +1853,6 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    const gains = getDeckMixGains({
-      crossfader,
-      levelA: deckVolumesA.track,
-      levelB: deckVolumesB.track,
-    });
     const context = audioContextRef.current;
     const graphA = deckAudioGraphRef.current.A;
     const graphB = deckAudioGraphRef.current.B;
@@ -1426,17 +1860,17 @@ export default function App() {
     if (graphA && context) {
       applyDeckEqValues({ graph: graphA, mixer: mixerA });
       applyDeckFxValues({ graph: graphA, fx: fxA, contextTime: context.currentTime });
-      graphA.outputGain.gain.setTargetAtTime(gains.deckA, context.currentTime, 0.01);
+      applyDeckOutputGain('A');
     } else if (audioRefA.current) {
-      audioRefA.current.volume = gains.deckA;
+      applyDeckOutputGain('A');
     }
 
     if (graphB && context) {
       applyDeckEqValues({ graph: graphB, mixer: mixerB });
       applyDeckFxValues({ graph: graphB, fx: fxB, contextTime: context.currentTime });
-      graphB.outputGain.gain.setTargetAtTime(gains.deckB, context.currentTime, 0.01);
+      applyDeckOutputGain('B');
     } else if (audioRefB.current) {
-      audioRefB.current.volume = gains.deckB;
+      applyDeckOutputGain('B');
     }
   }, [
     crossfader,
@@ -1454,6 +1888,7 @@ export default function App() {
     fxB.filter,
     fxB.echo,
     fxB.reverb,
+    selectedMonitorDeck,
     trackAId,
     trackBId,
   ]);
@@ -1462,64 +1897,100 @@ export default function App() {
     if (audioRefA.current) {
       audioRefA.current.playbackRate = playbackRateA;
     }
+
+    if (loopCoverAudioRef.current.A) {
+      loopCoverAudioRef.current.A.playbackRate = playbackRateA;
+    }
   }, [playbackRateA, trackAId]);
 
   useEffect(() => {
     if (audioRefB.current) {
       audioRefB.current.playbackRate = playbackRateB;
     }
+
+    if (loopCoverAudioRef.current.B) {
+      loopCoverAudioRef.current.B.playbackRate = playbackRateB;
+    }
   }, [playbackRateB, trackBId]);
 
   useEffect(() => {
-    const cancelDeckFrame = (deck: 'A' | 'B') => {
-      const frameId = jogRotationFrameRef.current[deck];
-
-      if (frameId != null) {
-        window.cancelAnimationFrame(frameId);
-        jogRotationFrameRef.current[deck] = null;
+    const syncDeckSource = (
+      audio: HTMLAudioElement | null,
+      track: Track | null,
+      setAudioState: React.Dispatch<React.SetStateAction<typeof defaultDeckAudioState>>,
+      setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>,
+    ) => {
+      if (!audio || !track?.src) {
+        return;
       }
 
-      jogRotationTimestampRef.current[deck] = null;
+      audio.pause();
+      audio.currentTime = 0;
+      audio.load();
+      if (loopCoverTimeoutRef.current.A != null) {
+        window.clearTimeout(loopCoverTimeoutRef.current.A);
+        loopCoverTimeoutRef.current.A = null;
+      }
+      loopCoverAudioRef.current.A?.pause();
+      loopCoverAudioRef.current.A = null;
+      loopCoverSourceRef.current.A?.disconnect();
+      loopCoverSourceRef.current.A = null;
+      setIsPlaying(false);
+      setAudioState({
+        currentTime: 0,
+        duration: 0,
+        error: null,
+      });
     };
 
-    const startDeckFrame = (
-      deck: 'A' | 'B',
-      playbackRate: number,
-      setRotation: React.Dispatch<React.SetStateAction<number>>,
+    syncDeckSource(audioRefA.current, trackA, setAudioStateA, setIsPlayingA);
+  }, [trackA?.src]);
+
+  useEffect(() => {
+    const syncDeckSource = (
+      audio: HTMLAudioElement | null,
+      track: Track | null,
+      setAudioState: React.Dispatch<React.SetStateAction<typeof defaultDeckAudioState>>,
+      setIsPlaying: React.Dispatch<React.SetStateAction<boolean>>,
     ) => {
-      const tick = (timestamp: number) => {
-        const previousTimestamp = jogRotationTimestampRef.current[deck] ?? timestamp;
-        const deltaSeconds = (timestamp - previousTimestamp) / 1000;
-        jogRotationTimestampRef.current[deck] = timestamp;
+      if (!audio || !track?.src) {
+        return;
+      }
 
-        setRotation((prev) => (prev + deltaSeconds * 180 * playbackRate) % 360);
-        jogRotationFrameRef.current[deck] = window.requestAnimationFrame(tick);
-      };
-
-      jogRotationFrameRef.current[deck] = window.requestAnimationFrame(tick);
+      audio.pause();
+      audio.currentTime = 0;
+      audio.load();
+      if (loopCoverTimeoutRef.current.B != null) {
+        window.clearTimeout(loopCoverTimeoutRef.current.B);
+        loopCoverTimeoutRef.current.B = null;
+      }
+      loopCoverAudioRef.current.B?.pause();
+      loopCoverAudioRef.current.B = null;
+      loopCoverSourceRef.current.B?.disconnect();
+      loopCoverSourceRef.current.B = null;
+      setIsPlaying(false);
+      setAudioState({
+        currentTime: 0,
+        duration: 0,
+        error: null,
+      });
     };
 
-    if (typeof window === 'undefined') {
-      return undefined;
+    syncDeckSource(audioRefB.current, trackB, setAudioStateB, setIsPlayingB);
+  }, [trackB?.src]);
+
+  useEffect(() => () => {
+    const frameA = jogRotationFrameRef.current.A;
+    const frameB = jogRotationFrameRef.current.B;
+
+    if (frameA != null) {
+      window.cancelAnimationFrame(frameA);
     }
 
-    if (isPlayingA && !isJogDotDraggingA) {
-      startDeckFrame('A', playbackRateA, setJogRotationA);
-    } else {
-      cancelDeckFrame('A');
+    if (frameB != null) {
+      window.cancelAnimationFrame(frameB);
     }
-
-    if (isPlayingB && !isJogDotDraggingB) {
-      startDeckFrame('B', playbackRateB, setJogRotationB);
-    } else {
-      cancelDeckFrame('B');
-    }
-
-    return () => {
-      cancelDeckFrame('A');
-      cancelDeckFrame('B');
-    };
-  }, [isPlayingA, isPlayingB, isJogDotDraggingA, isJogDotDraggingB, playbackRateA, playbackRateB]);
+  }, []);
 
   useEffect(() => () => {
     const timeoutA = syncPressTimeoutRef.current.A;
@@ -1543,6 +2014,14 @@ export default function App() {
       window.clearTimeout(sampleTimeoutB);
     }
 
+    if (loopCoverTimeoutRef.current.A != null) {
+      window.clearTimeout(loopCoverTimeoutRef.current.A);
+    }
+
+    if (loopCoverTimeoutRef.current.B != null) {
+      window.clearTimeout(loopCoverTimeoutRef.current.B);
+    }
+
     activeSampleAudioRef.current.A.forEach((audio) => {
       audio.pause();
       audio.src = '';
@@ -1552,6 +2031,11 @@ export default function App() {
       audio.src = '';
     });
 
+    loopCoverAudioRef.current.A?.pause();
+    loopCoverAudioRef.current.B?.pause();
+
+    loopCoverSourceRef.current.A?.disconnect();
+    loopCoverSourceRef.current.B?.disconnect();
     deckAudioGraphRef.current.A?.outputGain.disconnect();
     deckAudioGraphRef.current.A?.reverbWetGain.disconnect();
     deckAudioGraphRef.current.A?.reverbDelay.disconnect();
@@ -1588,12 +2072,17 @@ export default function App() {
     if (audio.paused) {
       try {
         const context = ensureAudioContext();
+        const setAudioState = deck === 'A' ? setAudioStateA : setAudioStateB;
+
+        setAudioState((prev) => ({ ...prev, error: null }));
 
         ensureDeckAudioGraph(deck, audio);
 
         if (context?.state === 'suspended') {
           await context.resume();
         }
+
+        await waitForAudioReady(audio);
 
         const graph = ensureDeckAudioGraph(deck, audio);
 
@@ -1602,21 +2091,32 @@ export default function App() {
           const fx = getDeckFxState(deck);
           applyDeckEqValues({ graph, mixer });
           applyDeckFxValues({ graph, fx, contextTime: context.currentTime });
-          graph.outputGain.gain.setTargetAtTime(getDeckTrackGain(deck), context.currentTime, 0.01);
+          applyDeckOutputGain(deck);
         }
 
         await audio.play();
-      } catch {
+        sendDeckMonitorPlayback(deck, 'play', {
+          currentTime: audio.currentTime,
+          playbackRate: audio.playbackRate,
+        });
+      } catch (error) {
+        const message = error instanceof Error && error.message === 'Audio load timed out'
+          ? 'Audio is still loading. Try again in a moment.'
+          : 'Audio failed to load or playback was blocked';
+
         if (deck === 'A') {
-          setAudioStateA((prev) => ({ ...prev, error: 'Playback was blocked by the browser' }));
+          setAudioStateA((prev) => ({ ...prev, error: message }));
         } else {
-          setAudioStateB((prev) => ({ ...prev, error: 'Playback was blocked by the browser' }));
+          setAudioStateB((prev) => ({ ...prev, error: message }));
         }
       }
       return;
     }
 
     audio.pause();
+    sendDeckMonitorPlayback(deck, 'pause', {
+      currentTime: audio.currentTime,
+    });
   };
 
   const getDeckDuration = (deck: 'A' | 'B') => {
@@ -1644,6 +2144,7 @@ export default function App() {
       currentTime: clampedTime,
       duration: Number.isFinite(duration) ? duration : prev.duration,
     }));
+    sendDeckMonitorPlayback(deck, 'seek', { currentTime: clampedTime });
   };
 
   const seekDeckFromHorizontalPointer = (
@@ -1678,8 +2179,8 @@ export default function App() {
     }
 
     const nextTime = getScrubbedTimeFromVerticalDrag({
-      startTime: verticalWaveformDragRef.current.startTime,
-      startY: verticalWaveformDragRef.current.startY,
+      startTime: verticalWaveformDragRef.current[deck].startTime,
+      startY: verticalWaveformDragRef.current[deck].startY,
       currentY,
       duration,
     });
@@ -1718,8 +2219,7 @@ export default function App() {
 
     const wasPlaying = !audio.paused;
 
-    jogDotDragRef.current = {
-      deck,
+    jogDotDragRef.current[deck] = {
       pointerId: event.pointerId,
       lastAngleDeg: startAngleDeg,
       wasPlaying,
@@ -1739,8 +2239,7 @@ export default function App() {
     event: React.PointerEvent<HTMLDivElement>,
   ) => {
     if (
-      jogDotDragRef.current.deck !== deck ||
-      jogDotDragRef.current.pointerId !== event.pointerId
+      jogDotDragRef.current[deck].pointerId !== event.pointerId
     ) {
       return;
     }
@@ -1753,12 +2252,12 @@ export default function App() {
       return;
     }
 
-    const deltaAngle = getShortestAngleDelta(jogDotDragRef.current.lastAngleDeg, nextAngleDeg);
+    const deltaAngle = getShortestAngleDelta(jogDotDragRef.current[deck].lastAngleDeg, nextAngleDeg);
     const setJogRotation = deck === 'A' ? setJogRotationA : setJogRotationB;
 
     setJogRotation((prev) => (prev + deltaAngle + 360) % 360);
     updateDeckPlaybackTime(deck, audio.currentTime + deltaAngle * 0.01);
-    jogDotDragRef.current.lastAngleDeg = nextAngleDeg;
+    jogDotDragRef.current[deck].lastAngleDeg = nextAngleDeg;
   };
 
   const handleJogWheelPointerEnd = (
@@ -1766,21 +2265,19 @@ export default function App() {
     event: React.PointerEvent<HTMLDivElement>,
   ) => {
     if (
-      jogDotDragRef.current.deck !== deck ||
-      jogDotDragRef.current.pointerId !== event.pointerId
+      jogDotDragRef.current[deck].pointerId !== event.pointerId
     ) {
       return;
     }
 
     const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
-    const wasPlaying = jogDotDragRef.current.wasPlaying;
+    const wasPlaying = jogDotDragRef.current[deck].wasPlaying;
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
-    jogDotDragRef.current = {
-      deck: null,
+    jogDotDragRef.current[deck] = {
       pointerId: null,
       lastAngleDeg: 0,
       wasPlaying: false,
@@ -1801,7 +2298,7 @@ export default function App() {
     deck: 'A' | 'B',
     event: React.PointerEvent<HTMLDivElement>,
   ) => {
-    horizontalWaveformDragRef.current = { deck, pointerId: event.pointerId };
+    horizontalWaveformDragRef.current[deck] = { pointerId: event.pointerId };
     event.currentTarget.setPointerCapture(event.pointerId);
     seekDeckFromHorizontalPointer(deck, event.clientX, event.currentTarget.getBoundingClientRect());
   };
@@ -1811,8 +2308,7 @@ export default function App() {
     event: React.PointerEvent<HTMLDivElement>,
   ) => {
     if (
-      horizontalWaveformDragRef.current.deck !== deck ||
-      horizontalWaveformDragRef.current.pointerId !== event.pointerId
+      horizontalWaveformDragRef.current[deck].pointerId !== event.pointerId
     ) {
       return;
     }
@@ -1825,8 +2321,7 @@ export default function App() {
     event: React.PointerEvent<HTMLDivElement>,
   ) => {
     if (
-      horizontalWaveformDragRef.current.deck !== deck ||
-      horizontalWaveformDragRef.current.pointerId !== event.pointerId
+      horizontalWaveformDragRef.current[deck].pointerId !== event.pointerId
     ) {
       return;
     }
@@ -1835,7 +2330,7 @@ export default function App() {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
-    horizontalWaveformDragRef.current = { deck: null, pointerId: null };
+    horizontalWaveformDragRef.current[deck] = { pointerId: null };
   };
 
   const handleVerticalWaveformPointerDown = (
@@ -1843,8 +2338,7 @@ export default function App() {
     event: React.PointerEvent<HTMLDivElement>,
   ) => {
     const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
-    verticalWaveformDragRef.current = {
-      deck,
+    verticalWaveformDragRef.current[deck] = {
       pointerId: event.pointerId,
       startY: event.clientY,
       startTime: audio?.currentTime ?? 0,
@@ -1857,8 +2351,7 @@ export default function App() {
     event: React.PointerEvent<HTMLDivElement>,
   ) => {
     if (
-      verticalWaveformDragRef.current.deck !== deck ||
-      verticalWaveformDragRef.current.pointerId !== event.pointerId
+      verticalWaveformDragRef.current[deck].pointerId !== event.pointerId
     ) {
       return;
     }
@@ -1871,8 +2364,7 @@ export default function App() {
     event: React.PointerEvent<HTMLDivElement>,
   ) => {
     if (
-      verticalWaveformDragRef.current.deck !== deck ||
-      verticalWaveformDragRef.current.pointerId !== event.pointerId
+      verticalWaveformDragRef.current[deck].pointerId !== event.pointerId
     ) {
       return;
     }
@@ -1881,8 +2373,7 @@ export default function App() {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
 
-    verticalWaveformDragRef.current = {
-      deck: null,
+    verticalWaveformDragRef.current[deck] = {
       pointerId: null,
       startY: 0,
       startTime: 0,
@@ -1893,10 +2384,14 @@ export default function App() {
     const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
     const setActivePadFx = deck === 'A' ? setActivePadFxA : setActivePadFxB;
     const playbackRate = deck === 'A' ? playbackRateA : playbackRateB;
-    const context = audioContextRef.current;
-    const graph = deckAudioGraphRef.current[deck];
+    const context = ensureAudioContext();
+    const graph = ensureDeckAudioGraph(deck, audio);
 
     setActivePadFx(padId);
+    if (context?.state === 'suspended') {
+      void context.resume();
+    }
+
     activePadFxRuntimeRef.current[deck] = applyPadFx({
       padId,
       audio,
@@ -1914,6 +2409,7 @@ export default function App() {
     const graph = deckAudioGraphRef.current[deck];
     const activeEffect = activePadFxRuntimeRef.current[deck];
     const playbackRate = deck === 'A' ? playbackRateA : playbackRateB;
+    const fx = getDeckFxState(deck);
 
     if (activeEffect?.padId !== padId) {
       return;
@@ -1927,6 +2423,8 @@ export default function App() {
       playbackRate,
       contextTime: context?.currentTime ?? 0,
     });
+    applyDeckFxValues({ graph, fx, contextTime: context?.currentTime ?? 0 });
+    applyDeckOutputGain(deck);
     activePadFxRuntimeRef.current[deck] = null;
     setActivePadFx(null);
   };
@@ -1962,8 +2460,10 @@ export default function App() {
   const handleLoopToggle = (deck: 'A' | 'B', loopId: 'loop4' | 'loop8') => {
     const audio = deck === 'A' ? audioRefA.current : audioRefB.current;
     const setLoopState = deck === 'A' ? setLoopStateA : setLoopStateB;
-    const bpm = deck === 'A' ? effectiveBpmA : effectiveBpmB;
     const duration = getDeckDuration(deck);
+    const track = deck === 'A' ? trackA : trackB;
+    const bpm = track?.bpm ?? (deck === 'A' ? effectiveBpmA : effectiveBpmB);
+    const beatOffset = waveformLibrary[track?.id ?? '']?.beatOffset ?? 0;
 
     if (!audio) {
       return;
@@ -1974,6 +2474,7 @@ export default function App() {
       loopId,
       currentTime: audio.currentTime,
       bpm,
+      beatOffset,
       duration,
     }));
   };
@@ -2010,6 +2511,8 @@ export default function App() {
 
     audio.currentTime = action.cuePoint;
     audio.pause();
+    sendDeckMonitorPlayback(deck, 'seek', { currentTime: action.cuePoint });
+    sendDeckMonitorPlayback(deck, 'pause', { currentTime: action.cuePoint });
   };
 
   const handleDeckHotCuePress = async (deck: 'A' | 'B', padIndex: number) => {
@@ -2063,10 +2566,15 @@ export default function App() {
       currentTime: action.time,
     }));
     setSelectedHotCue(padIndex);
+    sendDeckMonitorPlayback(deck, 'seek', { currentTime: action.time });
 
     if (action.shouldPlay && audio.paused) {
       try {
         await audio.play();
+        sendDeckMonitorPlayback(deck, 'play', {
+          currentTime: action.time,
+          playbackRate: audio.playbackRate,
+        });
       } catch {
         setAudioState((prev) => ({
           ...prev,
@@ -2155,6 +2663,11 @@ export default function App() {
     const setSelectedHotCue = deck === 'A' ? setSelectedHotCueA : setSelectedHotCueB;
     const setHotCueBank = deck === 'A' ? setHotCueBankA : setHotCueBankB;
     const setLoopState = deck === 'A' ? setLoopStateA : setLoopStateB;
+    const setMixer = deck === 'A' ? setMixerA : setMixerB;
+    const setFx = deck === 'A' ? setFxA : setFxB;
+    const setActivePadFx = deck === 'A' ? setActivePadFxA : setActivePadFxB;
+    const graph = deckAudioGraphRef.current[deck];
+    const contextTime = audioContextRef.current?.currentTime ?? 0;
 
     if (audio) {
       audio.pause();
@@ -2171,6 +2684,25 @@ export default function App() {
     setHotCueBank('cue1');
     setSelectedHotCue(0);
     setLoopState(createLoopState());
+    setMixer(createMixerKnobState());
+    setFx(createFxKnobState());
+    setActivePadFx(null);
+    activePadFxRuntimeRef.current[deck] = null;
+
+    if (graph) {
+      const nextMixer = createMixerKnobState();
+      const nextFx = createFxKnobState();
+      applyDeckEqValues({ graph, mixer: nextMixer });
+      applyDeckFxValues({ graph, fx: nextFx, contextTime });
+    }
+
+    sendMonitorMessage(createDeckLoadMessage({
+      deck,
+      track: selectedTrack,
+      currentTime: 0,
+      playbackRate: 1,
+      isPlaying: false,
+    }));
     closeLibrary();
   };
 
@@ -2178,7 +2710,7 @@ export default function App() {
     `${transportSecondaryButtonClassName} ${isSetMode ? 'bg-[#FFE2DE] ring-1 ring-[#FF3B30]/50 shadow-[0_0_16px_rgba(255,59,48,0.22),2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e]' : 'bg-[#D0D0D0]'}`;
 
   const cueRecallButtonClassName = (isCueSet: boolean, isSetMode: boolean) =>
-    `${transportSecondaryButtonClassName} ${isCueSet ? 'bg-[#FFF1D6] text-[#8A5A00] ring-1 ring-[#FFB74D]/45 shadow-[0_0_14px_rgba(255,183,77,0.18),2px_2px_4px_#2a2a2a,-2px_-2px_4px_#4e4e4e]' : 'bg-[#D0D0D0] text-[#3C3C3C]'} ${isSetMode ? 'scale-[0.98]' : ''}`;
+    `${transportSecondaryButtonClassName} ${isCueSet ? 'bg-[#FFF1D6] text-[#8A5A00] ring-1 ring-[#FFB74D]/35 shadow-[0_0_7px_rgba(255,183,77,0.14),1px_2px_3px_rgba(42,42,42,0.24),-1px_-1px_2px_rgba(78,78,78,0.42)]' : 'bg-[#D0D0D0] text-[#3C3C3C]'} ${isSetMode ? 'scale-[0.98]' : ''}`;
 
   const syncDeckToOther = (targetDeck: 'A' | 'B') => {
     const sourceTrack = targetDeck === 'A' ? trackB : trackA;
@@ -2255,14 +2787,12 @@ export default function App() {
 
     clearSyncPressTimeout(deck);
     syncPressStartedAtRef.current[deck] = 0;
-    syncSuppressClickRef.current[deck] = true;
 
     if (action === 'restore' || syncLongPressTriggeredRef.current[deck]) {
       syncLongPressTriggeredRef.current[deck] = false;
+      syncSuppressClickRef.current[deck] = true;
       return;
     }
-
-    syncDeckToOther(deck);
   };
 
   const handleSyncClick = (deck: 'A' | 'B') => {
@@ -2290,17 +2820,21 @@ export default function App() {
 
   const handleCrossfaderPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     setIsCrossfaderDragging(true);
+    crossfaderPointerIdRef.current = e.pointerId;
     updateCrossfaderFromPointer(e.clientX);
     e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const handleCrossfaderPointerMove = (e: React.PointerEvent<HTMLDivElement>) => {
-    if (!isCrossfaderDragging) return;
+    if (!isCrossfaderDragging || crossfaderPointerIdRef.current !== e.pointerId) return;
     updateCrossfaderFromPointer(e.clientX);
   };
 
   const handleCrossfaderPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (crossfaderPointerIdRef.current !== e.pointerId) return;
+
     setIsCrossfaderDragging(false);
+    crossfaderPointerIdRef.current = null;
 
     if (e.currentTarget.hasPointerCapture(e.pointerId)) {
       e.currentTarget.releasePointerCapture(e.pointerId);
@@ -2326,29 +2860,51 @@ export default function App() {
   const progressB = getWaveformProgress(audioStateB.currentTime, audioStateB.duration || waveformLibrary[trackB?.id ?? '']?.duration || 0);
   const waveformA = trackA ? (waveformLibrary[trackA.id] ?? defaultWaveformState) : defaultWaveformState;
   const waveformB = trackB ? (waveformLibrary[trackB.id] ?? defaultWaveformState) : defaultWaveformState;
-  const overviewPeaksA = getDisplayedWaveformPeaks(waveformA.displayPeaks, 120);
-  const overviewPeaksB = getDisplayedWaveformPeaks(waveformB.displayPeaks, 120);
-  const beatWindowSizeA = getWaveformBeatWindowSize(
-    waveformA.peaks.length,
-    audioStateA.duration || waveformA.duration,
-    effectiveBpmA,
-    8,
+  const overviewPeaksA = useMemo(
+    () => getDisplayedWaveformPeaks(waveformA.displayPeaks, 120),
+    [waveformA.displayPeaks],
   );
-  const beatWindowSizeB = getWaveformBeatWindowSize(
-    waveformB.peaks.length,
-    audioStateB.duration || waveformB.duration,
-    effectiveBpmB,
-    8,
+  const overviewPeaksB = useMemo(
+    () => getDisplayedWaveformPeaks(waveformB.displayPeaks, 120),
+    [waveformB.displayPeaks],
   );
-  const rawBeatWindowFrameA = getPlaybackLineWaveformFrame(
-    waveformA.displayPeaks,
-    progressA,
-    beatWindowSizeA,
+  const beatWindowSizeA = useMemo(
+    () => getWaveformBeatWindowSize(
+      waveformA.peaks.length,
+      audioStateA.duration || waveformA.duration,
+      effectiveBpmA,
+      8,
+      24,
+      120,
+    ),
+    [waveformA.peaks.length, audioStateA.duration, waveformA.duration, effectiveBpmA],
   );
-  const rawBeatWindowFrameB = getPlaybackLineWaveformFrame(
-    waveformB.displayPeaks,
-    progressB,
-    beatWindowSizeB,
+  const beatWindowSizeB = useMemo(
+    () => getWaveformBeatWindowSize(
+      waveformB.peaks.length,
+      audioStateB.duration || waveformB.duration,
+      effectiveBpmB,
+      8,
+      24,
+      120,
+    ),
+    [waveformB.peaks.length, audioStateB.duration, waveformB.duration, effectiveBpmB],
+  );
+  const rawBeatWindowFrameA = useMemo(
+    () => getPlaybackLineWaveformFrame(
+      waveformA.displayPeaks,
+      progressA,
+      beatWindowSizeA,
+    ),
+    [waveformA.displayPeaks, progressA, beatWindowSizeA],
+  );
+  const rawBeatWindowFrameB = useMemo(
+    () => getPlaybackLineWaveformFrame(
+      waveformB.displayPeaks,
+      progressB,
+      beatWindowSizeB,
+    ),
+    [waveformB.displayPeaks, progressB, beatWindowSizeB],
   );
   const beatWindowFrameA = rawBeatWindowFrameA;
   const beatWindowFrameB = rawBeatWindowFrameB;
@@ -2384,8 +2940,39 @@ export default function App() {
   }));
 
   return (
-    <div className="h-screen [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[100svh] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:min-h-[100svh] w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans relative">
-      
+    <div className={`${isIpadSafari ? 'ipad-safari-device' : ''} h-screen [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[100svh] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:min-h-[100svh] w-screen flex flex-col bg-base-grey select-none overflow-hidden text-gray-900 font-sans relative`}>
+      <div className="desktop-only fixed left-1/2 bottom-[calc(env(safe-area-inset-bottom)+86px)] z-[80] -translate-x-1/2 rounded-2xl border border-white/15 bg-[#2C2C2C]/95 px-2.5 py-2 shadow-[0_8px_22px_rgba(0,0,0,0.28),inset_0_1px_0_rgba(255,255,255,0.08)]">
+        <div className="flex items-center gap-2">
+          {(['A', 'B'] as const).map((deck) => (
+          <button
+            key={deck}
+            type="button"
+              {...getMultiTouchPressHandlers<HTMLButtonElement>(() => handleMonitorDeckSelect(deck))}
+              className={`h-10 min-w-[56px] rounded-xl px-3 text-[13px] font-black uppercase tracking-[0.12em] transition-all active:scale-95 ${
+                selectedMonitorDeck === deck ? 'bg-[#D0D0D0] text-black shadow-[0_0_8px_rgba(255,255,255,0.18)]' : 'bg-white/10 text-white/60'
+              }`}
+              style={selectedMonitorDeck === deck ? { color: deck === 'A' ? orange : blue } : undefined}
+              aria-pressed={selectedMonitorDeck === deck}
+              aria-label={selectedMonitorDeck === deck ? `Turn deck ${deck} monitor off` : `Monitor deck ${deck}`}
+            >
+              {deck}
+            </button>
+          ))}
+          <div
+            className={`h-2.5 w-2.5 rounded-full ${monitorStatus.connected ? 'bg-[#7ED321] shadow-[0_0_6px_rgba(126,211,33,0.55)]' : 'bg-white/25'}`}
+            title={monitorStatus.connected ? `${monitorStatus.monitors} monitor connected` : 'Monitor disconnected'}
+          />
+          <button
+            type="button"
+            {...getMultiTouchPressHandlers<HTMLButtonElement>(openMonitorWindow)}
+            className="h-10 rounded-xl bg-white/10 px-3 text-[11px] font-black uppercase tracking-[0.12em] text-white/70 transition-all active:scale-95"
+            aria-label="Open remote monitor page"
+          >
+            Open
+          </button>
+        </div>
+      </div>
+
       {/* 1. Header: Song Information & Global Controls - Further shrunk height and updated color */}
       <header className="h-[72px] grid grid-cols-[1fr_auto_1fr] bg-[#3C3C3C] shrink-0 z-50 border-b border-white/10">
         {/* Deck A Section */}
@@ -2393,12 +2980,12 @@ export default function App() {
           {/* Artwork - Flush with top and left */}
           <button
             type="button"
-            onClick={() => openLibrary('A')}
+            {...getMultiTouchPressHandlers<HTMLButtonElement>(() => openLibrary('A'))}
             className="h-full aspect-square relative shrink-0 cursor-pointer"
           >
             <img src={trackA?.artwork} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Artwork A" />
             {/* Library Icon - Bottom Left of artwork */}
-            <span className="absolute bottom-0.5 left-0.5 w-5 h-5 rounded bg-black/60 backdrop-blur-md flex items-center justify-center text-white/70 shadow-lg border border-white/10">
+            <span className="absolute bottom-0.5 left-0.5 w-5 h-5 rounded bg-black/68 flex items-center justify-center text-white/70 shadow-[0_2px_5px_rgba(0,0,0,0.32)] border border-white/10">
               <ListMusic size={12} />
             </span>
           </button>
@@ -2439,15 +3026,26 @@ export default function App() {
         </div>
 
         {/* Center Control Section */}
-        <div className="flex flex-col items-center justify-center px-2 gap-1 bg-[#333] border-x border-white/10 relative">
-          {/* Record Button */}
+        <div className="desktop-only flex-col items-center justify-center px-2 gap-1 bg-[#333] border-x border-white/10 relative">
           <div className="w-6 h-6 rounded-full flex items-center justify-center cursor-pointer group transition-all bg-[#D0D0D0] shadow-[0_2px_6px_rgba(0,0,0,0.3)] border border-white/20">
             <div className="w-2.5 h-2.5 bg-[#FF3B30] rounded-full shadow-[0_0_10px_#FF3B30] group-hover:scale-110 transition-transform" />
           </div>
-          
-          {/* Settings Button */}
+
           <button className="w-6 h-6 rounded-full flex items-center justify-center text-[#3C3C3C] hover:text-[#3C3C3C]/80 transition-all bg-[#D0D0D0] shadow-[0_2px_6px_rgba(0,0,0,0.3)] border border-white/20 active:scale-95">
             <Settings size={12} />
+          </button>
+        </div>
+
+        <div className="ipad-only items-center justify-center px-2 bg-[#333] border-x border-white/10 relative">
+          <button
+            type="button"
+            {...getMultiTouchPressHandlers<HTMLButtonElement>(openMonitorWindow)}
+            className={`relative w-9 h-9 rounded-full flex items-center justify-center text-[#3C3C3C] hover:text-[#3C3C3C]/80 transition-all bg-[#D0D0D0] shadow-[0_2px_6px_rgba(0,0,0,0.3)] border border-white/20 active:scale-95 ${selectedMonitorDeck ? 'ring-1 ring-white/40' : ''}`}
+            aria-label="Open remote monitor page"
+            title={monitorStatus.connected ? `${monitorStatus.monitors} monitor connected` : 'Monitor disconnected'}
+          >
+            <Activity size={16} strokeWidth={2.4} />
+            <span className={`absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full border border-[#333] ${monitorStatus.connected ? 'bg-[#7ED321] shadow-[0_0_8px_rgba(126,211,33,0.75)]' : 'bg-white/35'}`} />
           </button>
         </div>
 
@@ -2456,12 +3054,12 @@ export default function App() {
           {/* Artwork - Flush with top and right */}
           <button
             type="button"
-            onClick={() => openLibrary('B')}
+            {...getMultiTouchPressHandlers<HTMLButtonElement>(() => openLibrary('B'))}
             className="h-full aspect-square relative shrink-0 cursor-pointer"
           >
             <img src={trackB?.artwork} className="w-full h-full object-cover" referrerPolicy="no-referrer" alt="Artwork B" />
             {/* Library Icon - Bottom Right of artwork */}
-            <span className="absolute bottom-0.5 right-0.5 w-5 h-5 rounded bg-black/60 backdrop-blur-md flex items-center justify-center text-white/70 shadow-lg border border-white/10">
+            <span className="absolute bottom-0.5 right-0.5 w-5 h-5 rounded bg-black/68 flex items-center justify-center text-white/70 shadow-[0_2px_5px_rgba(0,0,0,0.32)] border border-white/10">
               <ListMusic size={12} />
             </span>
           </button>
@@ -2516,13 +3114,13 @@ export default function App() {
             {/* Bottom Tier: Navigation Buttons (Fixed Height) */}
             <div className="h-6 md:h-7 flex">
               <button 
-                onClick={() => setModeA(cycleMode(modeA, -1))}
+                {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setModeA(cycleMode(modeA, -1)))}
                 className="flex-1 flex items-center justify-center bg-[#D0D0D0] hover:bg-[#D8D8D8] border-r border-black/10 active:shadow-inner transition-all"
               >
                 <div className="w-0 h-0 border-t-[4px] border-t-transparent border-r-[6px] border-r-black/60 border-b-[4px] border-b-transparent" />
               </button>
               <button 
-                onClick={() => setModeA(cycleMode(modeA, 1))}
+                {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setModeA(cycleMode(modeA, 1)))}
                 className="flex-1 flex items-center justify-center bg-[#D0D0D0] hover:bg-[#D8D8D8] active:shadow-inner transition-all"
               >
                 <div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[6px] border-l-black/60 border-b-[4px] border-b-transparent" />
@@ -2571,14 +3169,14 @@ export default function App() {
                 />
                 <div className="flex flex-col items-center gap-1.5">
                   <button
-                    onClick={() => setLevelTargetA((prev) => toggleLevelTarget(prev, 'cues'))}
+                    {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setLevelTargetA((prev) => toggleLevelTarget(prev, 'cues')))}
                     className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetA === 'cues' ? 'text-white' : 'text-black/45 bg-white/20'}`}
                     style={levelTargetA === 'cues' ? { backgroundColor: orange, boxShadow: `0 0 12px ${orange}88` } : undefined}
                   >
                     Cue
                   </button>
                   <button
-                    onClick={() => setLevelTargetA((prev) => toggleLevelTarget(prev, 'pads'))}
+                    {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setLevelTargetA((prev) => toggleLevelTarget(prev, 'pads')))}
                     className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetA === 'pads' ? 'text-white' : 'text-black/45 bg-white/20'}`}
                     style={levelTargetA === 'pads' ? { backgroundColor: orange, boxShadow: `0 0 12px ${orange}88` } : undefined}
                   >
@@ -2603,6 +3201,10 @@ export default function App() {
             progress={progressA}
             title={trackA?.title || ""} 
             artist={trackA?.artist || ""} 
+            monitorDeck="A"
+            isMonitorSelected={selectedMonitorDeck === 'A'}
+            monitorPlacement="right"
+            onMonitorToggle={() => handleMonitorDeckSelect('A')}
             isJogDragging={isJogDotDraggingA}
             onJogPointerDown={(event) => handleJogWheelPointerDown('A', event)}
             onJogPointerMove={(event) => handleJogWheelPointerMove('A', event)}
@@ -2622,8 +3224,6 @@ export default function App() {
             onPointerUp={(event) => handleVerticalWaveformPointerEnd('A', event)}
             onPointerCancel={(event) => handleVerticalWaveformPointerEnd('A', event)}
           />
-          <VUMeter color={orange} active={isPlayingA} />
-          <VUMeter color={blue} active={isPlayingB} />
           <VerticalWaveform
             peaks={beatWindowFrameB.peaks}
             offset={beatWindowFrameB.offset}
@@ -2648,6 +3248,10 @@ export default function App() {
             progress={progressB}
             title={trackB?.title || ""} 
             artist={trackB?.artist || ""} 
+            monitorDeck="B"
+            isMonitorSelected={selectedMonitorDeck === 'B'}
+            monitorPlacement="left"
+            onMonitorToggle={() => handleMonitorDeckSelect('B')}
             isJogDragging={isJogDotDraggingB}
             onJogPointerDown={(event) => handleJogWheelPointerDown('B', event)}
             onJogPointerMove={(event) => handleJogWheelPointerMove('B', event)}
@@ -2667,13 +3271,13 @@ export default function App() {
             {/* Bottom Tier: Navigation Buttons (Fixed Height) */}
             <div className="h-6 md:h-7 flex">
               <button 
-                onClick={() => setModeB(cycleMode(modeB, -1))}
+                {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setModeB(cycleMode(modeB, -1)))}
                 className="flex-1 flex items-center justify-center bg-[#D0D0D0] hover:bg-[#D8D8D8] border-r border-black/10 active:shadow-inner transition-all"
               >
                 <div className="w-0 h-0 border-t-[4px] border-t-transparent border-r-[6px] border-r-black/60 border-b-[4px] border-b-transparent" />
               </button>
               <button 
-                onClick={() => setModeB(cycleMode(modeB, 1))}
+                {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setModeB(cycleMode(modeB, 1)))}
                 className="flex-1 flex items-center justify-center bg-[#D0D0D0] hover:bg-[#D8D8D8] active:shadow-inner transition-all"
               >
                 <div className="w-0 h-0 border-t-[4px] border-t-transparent border-l-[6px] border-l-black/60 border-b-[4px] border-b-transparent" />
@@ -2722,14 +3326,14 @@ export default function App() {
                 />
                 <div className="flex flex-col items-center gap-1.5">
                   <button
-                    onClick={() => setLevelTargetB((prev) => toggleLevelTarget(prev, 'cues'))}
+                    {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setLevelTargetB((prev) => toggleLevelTarget(prev, 'cues')))}
                     className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetB === 'cues' ? 'text-white' : 'text-black/45 bg-white/20'}`}
                     style={levelTargetB === 'cues' ? { backgroundColor: blue, boxShadow: `0 0 12px ${blue}88` } : undefined}
                   >
                     Cue
                   </button>
                   <button
-                    onClick={() => setLevelTargetB((prev) => toggleLevelTarget(prev, 'pads'))}
+                    {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setLevelTargetB((prev) => toggleLevelTarget(prev, 'pads')))}
                     className={`min-w-[46px] rounded-lg px-2 py-1 text-[8px] font-bold uppercase tracking-[0.14em] transition-colors ${levelTargetB === 'pads' ? 'text-white' : 'text-black/45 bg-white/20'}`}
                     style={levelTargetB === 'pads' ? { backgroundColor: blue, boxShadow: `0 0 12px ${blue}88` } : undefined}
                   >
@@ -2771,21 +3375,21 @@ export default function App() {
           <div className="flex justify-between items-center shrink-0 gap-1.5 md:gap-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1">
             <div className="grid grid-cols-3 gap-1.5 md:gap-2.5 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1 text-[10px] md:text-[11px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold uppercase tracking-[0.14em] md:tracking-[0.16em] flex-1 max-w-[280px] xl:max-w-[320px]">
               <button
-                onClick={() => setPadModeA('hotCue')}
+                {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setPadModeA('hotCue'))}
                 className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeA === 'hotCue' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
                 style={padModeA === 'hotCue' ? { textShadow: '0 0 8px rgba(255, 148, 87, 0.85), 0 0 14px rgba(255, 148, 87, 0.45)' } : undefined}
               >
                 Hot Cue
               </button>
               <button
-                onClick={() => setPadModeA('padFx')}
+                {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setPadModeA('padFx'))}
                 className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeA === 'padFx' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
                 style={padModeA === 'padFx' ? { textShadow: '0 0 8px rgba(255, 148, 87, 0.85), 0 0 14px rgba(255, 148, 87, 0.45)' } : undefined}
               >
                 Pad FX
               </button>
               <button
-                onClick={() => setPadModeA('sample')}
+                {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setPadModeA('sample'))}
                 className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeA === 'sample' ? 'text-white border-deck-a' : 'text-black/30 border-transparent'}`}
                 style={padModeA === 'sample' ? { textShadow: '0 0 8px rgba(255, 148, 87, 0.85), 0 0 14px rgba(255, 148, 87, 0.45)' } : undefined}
               >
@@ -2793,16 +3397,12 @@ export default function App() {
               </button>
             </div>
             <div className="shrink-0 flex items-center gap-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-0.5">
-              <button className="flex items-center gap-1 md:gap-1.5 px-1.5 md:px-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-1.5 py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-lg neu-button text-[9px] md:text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[8px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] text-black/65">
-                <Pencil size={11} strokeWidth={2.2} />
-                <span>Edit</span>
-              </button>
               {padModeA === 'hotCue' && (
                 <>
                   {(['cue1', 'cue2'] as const).map((bank) => (
                     <button
                       key={bank}
-                      onClick={() => setHotCueBankA(bank)}
+                      {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setHotCueBankA(bank))}
                       className={`px-1.5 md:px-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-1 py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-lg text-[8px] md:text-[9px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[7px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${hotCueBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
@@ -2815,7 +3415,7 @@ export default function App() {
                   {(['fx1', 'fx2'] as const).map((bank) => (
                     <button
                       key={bank}
-                      onClick={() => setPadFxBankA(bank)}
+                      {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setPadFxBankA(bank))}
                       className={`px-1.5 md:px-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-1 py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-lg text-[8px] md:text-[9px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[7px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${padFxBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
@@ -2825,10 +3425,10 @@ export default function App() {
               )}
               {padModeA === 'sample' && (
                 <>
-                  {(['s1', 's2'] as const).map((bank) => (
+                  {(['s1', 's2', 's3'] as const).map((bank) => (
                     <button
                       key={bank}
-                      onClick={() => setSampleBankA(bank)}
+                      {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setSampleBankA(bank))}
                       className={`px-1.5 md:px-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-1 py-1 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:py-0.5 rounded-lg text-[8px] md:text-[9px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[7px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${sampleBankA === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
@@ -2846,14 +3446,14 @@ export default function App() {
                   {hotCuesA.map((cue, i) => (
                     <button
                       key={cue.id}
-                      onClick={() => void handleDeckHotCuePress('A', i)}
+                      {...getMultiTouchPressHandlers<HTMLButtonElement>(() => void handleDeckHotCuePress('A', i))}
                       className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
                       style={{
                         backgroundColor: cue.isSet ? '#D8D8D8' : '#D0D0D0',
                         borderColor: cue.isSet || selectedHotCueA === i ? cue.color : '#D0D0D0',
                         boxShadow: cue.isSet || selectedHotCueA === i
-                          ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${cue.color}, 0 0 18px ${cue.glow}, 0 0 28px ${cue.glow}`
-                          : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}`,
+                          ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${cue.color}, 0 0 8px ${cue.glow}`
+                          : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 6px ${cue.glow}`,
                         transform: selectedHotCueA === i ? 'translateY(-1px)' : 'translateY(0)',
                       }}
                     >
@@ -2883,13 +3483,13 @@ export default function App() {
                   ].map((loop) => (
                     <button
                       key={loop.id}
-                      onClick={() => handleLoopToggle('A', loop.id)}
+                      {...getMultiTouchPressHandlers<HTMLButtonElement>(() => handleLoopToggle('A', loop.id))}
                       className="rounded-xl border-2 px-3 py-2 flex items-center justify-center text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)] transition-all duration-150 active:scale-[0.98]"
                       style={{
                         backgroundColor: loopStateA.activeLoop === loop.id ? '#D8D8D8' : '#D0D0D0',
                         borderColor: loopStateA.activeLoop === loop.id ? orange : '#D0D0D0',
                         boxShadow: loopStateA.activeLoop === loop.id
-                          ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${orange}, 0 0 18px ${orange}55`
+                          ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${orange}, 0 0 8px ${orange}44`
                           : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08)`,
                       }}
                     >
@@ -2915,8 +3515,8 @@ export default function App() {
                       backgroundColor: activePadFxA === pad.id ? '#DADADA' : '#D0D0D0',
                       borderColor: pad.accent,
                       boxShadow: activePadFxA === pad.id
-                        ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${pad.accent}, 0 0 16px ${pad.accent}55, 0 0 24px ${pad.accent}33`
-                        : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
+                        ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${pad.accent}, 0 0 8px ${pad.accent}44`
+                        : `inset 0 1px 0 rgba(255,255,255,0.35), 0 1px 4px rgba(0,0,0,0.08)`,
                       transform: activePadFxA === pad.id ? 'translateY(1px)' : 'translateY(0)',
                     }}
                   >
@@ -2934,14 +3534,14 @@ export default function App() {
                 {sampleButtonsA.map((sample) => (
                   <button
                     key={sample.id}
-                    onClick={() => handleSampleTrigger('A', sample)}
+                    {...getMultiTouchPressHandlers<HTMLButtonElement>(() => handleSampleTrigger('A', sample))}
                     className="rounded-xl min-h-0 border-2 p-2 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:p-1.5 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                     style={{
                       backgroundColor: activeSampleA === sample.id ? '#DADADA' : '#D0D0D0',
                       borderColor: sample.accent,
                       boxShadow: activeSampleA === sample.id
-                        ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${sample.accent}, 0 0 16px ${sample.accent}55, 0 0 24px ${sample.accent}33`
-                        : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
+                        ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${sample.accent}, 0 0 8px ${sample.accent}44`
+                        : `inset 0 1px 0 rgba(255,255,255,0.35), 0 1px 4px rgba(0,0,0,0.08)`,
                       transform: activeSampleA === sample.id ? 'translateY(1px)' : 'translateY(0)',
                     }}
                   >
@@ -2960,38 +3560,34 @@ export default function App() {
           <div className="flex justify-between items-center shrink-0 gap-1.5 md:gap-2">
             <div className="grid grid-cols-3 gap-1.5 md:gap-2.5 text-[10px] md:text-[11px] font-bold uppercase tracking-[0.14em] md:tracking-[0.16em] flex-1 max-w-[280px] xl:max-w-[320px]">
               <button
-                onClick={() => setPadModeB('hotCue')}
+                {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setPadModeB('hotCue'))}
                 className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeB === 'hotCue' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
-                style={padModeB === 'hotCue' ? { textShadow: '0 0 8px rgba(46, 141, 255, 0.9), 0 0 14px rgba(46, 141, 255, 0.5)' } : undefined}
+                style={padModeB === 'hotCue' ? { textShadow: '0 0 5px rgba(46, 141, 255, 0.55)' } : undefined}
               >
                 Hot Cue
               </button>
               <button
-                onClick={() => setPadModeB('padFx')}
+                {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setPadModeB('padFx'))}
                 className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeB === 'padFx' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
-                style={padModeB === 'padFx' ? { textShadow: '0 0 8px rgba(46, 141, 255, 0.9), 0 0 14px rgba(46, 141, 255, 0.5)' } : undefined}
+                style={padModeB === 'padFx' ? { textShadow: '0 0 5px rgba(46, 141, 255, 0.55)' } : undefined}
               >
                 Pad FX
               </button>
               <button
-                onClick={() => setPadModeB('sample')}
+                {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setPadModeB('sample'))}
                 className={`min-w-0 rounded-lg px-1.5 md:px-2 py-1 md:py-1.5 text-center border-b-2 transition-colors ${padModeB === 'sample' ? 'text-white border-deck-b' : 'text-black/30 border-transparent'}`}
-                style={padModeB === 'sample' ? { textShadow: '0 0 8px rgba(46, 141, 255, 0.9), 0 0 14px rgba(46, 141, 255, 0.5)' } : undefined}
+                style={padModeB === 'sample' ? { textShadow: '0 0 5px rgba(46, 141, 255, 0.55)' } : undefined}
               >
                 Sample
               </button>
             </div>
             <div className="shrink-0 flex items-center gap-1">
-              <button className="flex items-center gap-1 md:gap-1.5 px-1.5 md:px-2 py-1 rounded-lg neu-button text-[9px] md:text-[10px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] text-black/65">
-                <Pencil size={11} strokeWidth={2.2} />
-                <span>Edit</span>
-              </button>
               {padModeB === 'hotCue' && (
                 <>
                   {(['cue1', 'cue2'] as const).map((bank) => (
                     <button
                       key={bank}
-                      onClick={() => setHotCueBankB(bank)}
+                      {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setHotCueBankB(bank))}
                       className={`px-1.5 md:px-2 py-1 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${hotCueBankB === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
@@ -3004,7 +3600,7 @@ export default function App() {
                   {(['fx1', 'fx2'] as const).map((bank) => (
                     <button
                       key={bank}
-                      onClick={() => setPadFxBankB(bank)}
+                      {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setPadFxBankB(bank))}
                       className={`px-1.5 md:px-2 py-1 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${padFxBankB === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
@@ -3014,10 +3610,10 @@ export default function App() {
               )}
               {padModeB === 'sample' && (
                 <>
-                  {(['s1', 's2'] as const).map((bank) => (
+                  {(['s1', 's2', 's3'] as const).map((bank) => (
                     <button
                       key={bank}
-                      onClick={() => setSampleBankB(bank)}
+                      {...getMultiTouchPressHandlers<HTMLButtonElement>(() => setSampleBankB(bank))}
                       className={`px-1.5 md:px-2 py-1 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-[0.12em] md:tracking-[0.14em] transition-colors ${sampleBankB === bank ? 'neu-button text-black/80' : 'bg-white/20 text-black/45'}`}
                     >
                       {bank.toUpperCase()}
@@ -3035,14 +3631,14 @@ export default function App() {
                   {hotCuesB.map((cue, i) => (
                     <button
                       key={cue.id}
-                      onClick={() => void handleDeckHotCuePress('B', i)}
+                      {...getMultiTouchPressHandlers<HTMLButtonElement>(() => void handleDeckHotCuePress('B', i))}
                       className="relative rounded-xl min-h-0 overflow-hidden border-2 flex flex-col justify-between p-2 text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.18)] transition-all duration-150 active:scale-[0.98]"
                       style={{
                         backgroundColor: cue.isSet ? '#D8D8D8' : '#D0D0D0',
                         borderColor: cue.isSet || selectedHotCueB === i ? cue.color : '#D0D0D0',
                         boxShadow: cue.isSet || selectedHotCueB === i
-                          ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${cue.color}, 0 0 18px ${cue.glow}, 0 0 28px ${cue.glow}`
-                          : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 14px ${cue.glow}`,
+                          ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${cue.color}, 0 0 8px ${cue.glow}`
+                          : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08), 0 0 6px ${cue.glow}`,
                         transform: selectedHotCueB === i ? 'translateY(-1px)' : 'translateY(0)',
                       }}
                     >
@@ -3072,13 +3668,13 @@ export default function App() {
                   ].map((loop) => (
                     <button
                       key={loop.id}
-                      onClick={() => handleLoopToggle('B', loop.id)}
+                      {...getMultiTouchPressHandlers<HTMLButtonElement>(() => handleLoopToggle('B', loop.id))}
                       className="rounded-xl border-2 px-3 py-2 flex items-center justify-center text-center shadow-[inset_0_1px_0_rgba(255,255,255,0.28)] transition-all duration-150 active:scale-[0.98]"
                       style={{
                         backgroundColor: loopStateB.activeLoop === loop.id ? '#D8D8D8' : '#D0D0D0',
                         borderColor: loopStateB.activeLoop === loop.id ? blue : '#D0D0D0',
                         boxShadow: loopStateB.activeLoop === loop.id
-                          ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${blue}, 0 0 18px ${blue}55`
+                          ? `inset 0 1px 0 rgba(255,255,255,0.5), 0 0 0 1px ${blue}, 0 0 8px ${blue}44`
                           : `inset 0 1px 0 rgba(255,255,255,0.4), 0 0 0 1px rgba(0,0,0,0.08)`,
                       }}
                     >
@@ -3104,8 +3700,8 @@ export default function App() {
                       backgroundColor: activePadFxB === pad.id ? '#DADADA' : '#D0D0D0',
                       borderColor: pad.accent,
                       boxShadow: activePadFxB === pad.id
-                        ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${pad.accent}, 0 0 16px ${pad.accent}55, 0 0 24px ${pad.accent}33`
-                        : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
+                        ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${pad.accent}, 0 0 8px ${pad.accent}44`
+                        : `inset 0 1px 0 rgba(255,255,255,0.35), 0 1px 4px rgba(0,0,0,0.08)`,
                       transform: activePadFxB === pad.id ? 'translateY(1px)' : 'translateY(0)',
                     }}
                   >
@@ -3123,14 +3719,14 @@ export default function App() {
                 {sampleButtonsB.map((sample) => (
                   <button
                     key={sample.id}
-                    onClick={() => handleSampleTrigger('B', sample)}
+                    {...getMultiTouchPressHandlers<HTMLButtonElement>(() => handleSampleTrigger('B', sample))}
                     className="rounded-xl min-h-0 border-2 p-2 flex items-end justify-start text-left shadow-[inset_0_1px_0_rgba(255,255,255,0.35)] transition-all duration-75 active:scale-[0.97]"
                     style={{
                       backgroundColor: activeSampleB === sample.id ? '#DADADA' : '#D0D0D0',
                       borderColor: sample.accent,
                       boxShadow: activeSampleB === sample.id
-                        ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${sample.accent}, 0 0 16px ${sample.accent}55, 0 0 24px ${sample.accent}33`
-                        : `inset 0 1px 0 rgba(255,255,255,0.35), 0 0 14px rgba(0,0,0,0.08)`,
+                        ? `inset 0 1px 0 rgba(255,255,255,0.45), 0 0 0 1px ${sample.accent}, 0 0 8px ${sample.accent}44`
+                        : `inset 0 1px 0 rgba(255,255,255,0.35), 0 1px 4px rgba(0,0,0,0.08)`,
                       transform: activeSampleB === sample.id ? 'translateY(1px)' : 'translateY(0)',
                     }}
                   >
@@ -3168,25 +3764,25 @@ export default function App() {
       </div>
 
     {/* 4. Footer: Transport Controls & Crossfader - Updated button styles and shortened range */}
-    <footer className="h-20 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[calc(104px+env(safe-area-inset-bottom))] grid grid-cols-[auto_1fr_auto] gap-0 items-center [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:items-start px-6 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-4 pt-0 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:pt-4 pb-[calc(env(safe-area-inset-bottom)+8px)] shrink-0 bg-[#3C3C3C] border-t border-white/10 shadow-[0_-4px_10px_rgba(0,0,0,0.2)]">
+    <footer className={`ipad-transport-footer ${isIpadSafari ? 'ipad-safari-footer' : ''} h-20 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:h-[calc(104px+env(safe-area-inset-bottom))] grid grid-cols-[auto_1fr_auto] gap-0 items-center [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:items-start px-6 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:px-4 pt-0 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:pt-4 pb-[calc(env(safe-area-inset-bottom)+8px)] shrink-0 bg-[#3C3C3C] border-t border-white/10 shadow-[0_-4px_10px_rgba(0,0,0,0.2)]`}>
         {/* Left Controls */}
         <div className="flex items-center gap-3 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
           <button 
-            onClick={() => void toggleDeckPlayback('A')} 
+            {...getMultiTouchPressHandlers<HTMLButtonElement>(() => void toggleDeckPlayback('A'))}
             className={transportPlayButtonClassName}
           >
             <PlayPauseIcon />
           </button>
           <button
-            onClick={() => toggleDeckCueSetMode('A')}
+            {...getMultiTouchPressHandlers<HTMLButtonElement>(() => toggleDeckCueSetMode('A'))}
             className={`${cueSetButtonClassName(cueStateA.isSetMode)} group`}
             aria-pressed={cueStateA.isSetMode}
             aria-label={cueStateA.isSetMode ? 'Deck A set mode armed' : 'Arm deck A cue set mode'}
           >
-            <div className={`w-2.5 h-2.5 rounded-full transition-transform ${cueStateA.isSetMode ? 'bg-[#FF3B30] shadow-[0_0_14px_#FF3B30]' : 'bg-[#FF3B30] shadow-[0_0_10px_#FF3B30] group-hover:scale-110'}`} />
+            <div className={`w-2.5 h-2.5 rounded-full transition-transform ${cueStateA.isSetMode ? 'bg-[#FF3B30] shadow-[0_0_7px_rgba(255,59,48,0.65)]' : 'bg-[#FF3B30] shadow-[0_0_5px_rgba(255,59,48,0.6)] group-hover:scale-110'}`} />
           </button>
           <button
-            onClick={() => handleDeckCuePress('A')}
+            {...getMultiTouchPressHandlers<HTMLButtonElement>(() => handleDeckCuePress('A'))}
             className={cueRecallButtonClassName(cueStateA.isCueSet, cueStateA.isSetMode)}
             aria-pressed={cueStateA.isCueSet}
             aria-label={cueStateA.isCueSet ? 'Deck A cue point is set' : 'Deck A cue point is not set'}
@@ -3206,9 +3802,10 @@ export default function App() {
               ref={crossfaderRef}
               className="flex-1 h-full relative flex items-center touch-none cursor-ew-resize"
               onPointerDown={handleCrossfaderPointerDown}
-              onPointerMove={handleCrossfaderPointerMove}
-              onPointerUp={handleCrossfaderPointerUp}
-            >
+	              onPointerMove={handleCrossfaderPointerMove}
+	              onPointerUp={handleCrossfaderPointerUp}
+	              onPointerCancel={handleCrossfaderPointerUp}
+	            >
               {/* Track Line */}
               <div className="w-full h-[3px] bg-[#2a2a2a] rounded-full shadow-[inset_0_1px_2px_rgba(0,0,0,0.5),0_1px_0_rgba(255,255,255,0.05)]" />
               
@@ -3237,7 +3834,7 @@ export default function App() {
         {/* Right Controls */}
         <div className="flex items-center gap-3 [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:gap-1.5">
           <button
-            onClick={() => handleDeckCuePress('B')}
+            {...getMultiTouchPressHandlers<HTMLButtonElement>(() => handleDeckCuePress('B'))}
             className={cueRecallButtonClassName(cueStateB.isCueSet, cueStateB.isSetMode)}
             aria-pressed={cueStateB.isCueSet}
             aria-label={cueStateB.isCueSet ? 'Deck B cue point is set' : 'Deck B cue point is not set'}
@@ -3245,15 +3842,15 @@ export default function App() {
             <span className="text-[10px] [@media(hover:none)_and_(pointer:coarse)_and_(min-width:820px)_and_(max-width:1180px)_and_(max-height:900px)]:text-[9px] font-bold tracking-widest">CUE</span>
           </button>
           <button
-            onClick={() => toggleDeckCueSetMode('B')}
+            {...getMultiTouchPressHandlers<HTMLButtonElement>(() => toggleDeckCueSetMode('B'))}
             className={`${cueSetButtonClassName(cueStateB.isSetMode)} group`}
             aria-pressed={cueStateB.isSetMode}
             aria-label={cueStateB.isSetMode ? 'Deck B set mode armed' : 'Arm deck B cue set mode'}
           >
-            <div className={`w-2.5 h-2.5 rounded-full transition-transform ${cueStateB.isSetMode ? 'bg-[#FF3B30] shadow-[0_0_14px_#FF3B30]' : 'bg-[#FF3B30] shadow-[0_0_10px_#FF3B30] group-hover:scale-110'}`} />
+            <div className={`w-2.5 h-2.5 rounded-full transition-transform ${cueStateB.isSetMode ? 'bg-[#FF3B30] shadow-[0_0_7px_rgba(255,59,48,0.65)]' : 'bg-[#FF3B30] shadow-[0_0_5px_rgba(255,59,48,0.6)] group-hover:scale-110'}`} />
           </button>
           <button 
-            onClick={() => void toggleDeckPlayback('B')} 
+            {...getMultiTouchPressHandlers<HTMLButtonElement>(() => void toggleDeckPlayback('B'))}
             className={transportPlayButtonClassName}
           >
             <PlayPauseIcon />
@@ -3269,8 +3866,8 @@ export default function App() {
         hidden
         onChange={handleImportTracks}
       />
-      <audio ref={audioRefA} preload="metadata" src={trackA?.src} hidden />
-      <audio ref={audioRefB} preload="metadata" src={trackB?.src} hidden />
+      <audio ref={audioRefA} preload="auto" src={trackA?.src} hidden />
+      <audio ref={audioRefB} preload="auto" src={trackB?.src} hidden />
       <MusicLibraryModal
         deck={libraryDeck}
         isOpen={libraryDeck !== null}

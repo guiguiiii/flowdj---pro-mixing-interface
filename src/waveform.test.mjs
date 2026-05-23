@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   analyzeDecodedTrack,
   buildWaveformPeaks,
+  estimateBeatOffsetFromSamples,
   getDisplayedWaveformPeaks,
   getPlaybackLineWaveformFrame,
   getVerticalWaveformTranslateY,
@@ -268,6 +269,7 @@ test('analyzeDecodedTrack estimates waveform duration bpm and key from decoded s
 
   assert.equal(analysis.duration, durationSeconds);
   assert.equal(analysis.bpm, 120);
+  assert.equal(analysis.beatOffset, 0);
   assert.equal(analysis.key, '8A');
   assert.equal(analysis.peaks.length > 0, true);
   assert.equal(typeof analysis.peaks[0].low, 'number');
@@ -284,4 +286,35 @@ test('analyzeDecodedTrack estimates waveform duration bpm and key from decoded s
     )),
     true,
   );
+});
+
+test('estimateBeatOffsetFromSamples finds the first strong beat phase', () => {
+  const sampleRate = 44100;
+  const durationSeconds = 8;
+  const totalSamples = sampleRate * durationSeconds;
+  const samples = new Float32Array(totalSamples);
+  const offsetSeconds = 0.18;
+
+  for (let beat = 0; beat < durationSeconds * 2; beat += 1) {
+    const start = Math.floor((offsetSeconds + beat * 0.5) * sampleRate);
+    for (let i = 0; i < 1200 && start + i < samples.length; i += 1) {
+      samples[start + i] = (1 - i / 1200) * 0.9;
+    }
+  }
+
+  assert.equal(
+    estimateBeatOffsetFromSamples(samples, sampleRate, 120),
+    0.186,
+  );
+});
+
+test('analyzeDecodedTrack can skip key estimation for responsive automatic analysis', () => {
+  const sampleRate = 44100;
+  const samples = new Float32Array(sampleRate);
+  const analysis = analyzeDecodedTrack(samples, sampleRate, 128, { includeKey: false });
+
+  assert.equal(analysis.duration, 1);
+  assert.equal(analysis.bpm, 120);
+  assert.equal(analysis.key, undefined);
+  assert.equal(analysis.peaks.length, 128);
 });
